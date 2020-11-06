@@ -1,4 +1,12 @@
-## Elasticsearch backups
+# Elasticsearch backups
+
+## Vault
+Enable the transit encryption engine and create a key called `transit`.
+
+## loading index from s3
+```sh
+./main index
+```
 
 ## Dumping encrypted index to S3
 ```sh
@@ -7,7 +15,7 @@ s3cmd ls -c s3conf s3://dumps
 s3cmd get -c s3conf s3://dumps/indexname
 ```
 
-## Loading index from S3
+## loading index from s3
 ```sh
 ./main load
 ```

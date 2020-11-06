@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -28,42 +27,6 @@ func readResponse(r io.Reader) string {
 	var b bytes.Buffer
 	b.ReadFrom(r)
 	return b.String()
-}
-
-func indexDocuments(es elastic.Client, indexName string) {
-	log.Println("Indexing the documents...")
-	for i := 1; i <= 2000; i++ {
-		res, err := es.Index(
-			indexName,
-			strings.NewReader(`{"title" : "test"}`),
-			es.Index.WithDocumentID(strconv.Itoa(i)),
-		)
-
-		if err != nil || res.IsError() {
-			log.Error("Error happens here")
-			log.Fatalf("Error: %s: %s", err, res)
-		}
-	}
-	time.Sleep(time.Second * 4)
-}
-
-func checkDocuments(es elastic.Client, indexName string) {
-	res, err := es.Search(
-		es.Search.WithIndex(indexName),
-		es.Search.WithSize(10),
-		es.Search.WithSort("_doc"),
-	)
-
-	if err != nil {
-		log.Error(err)
-	}
-
-	json := readResponse(res.Body)
-	res.Body.Close()
-
-	hits := gjson.Get(json, "hits.hits")
-	log.Info(hits)
-
 }
 
 func getDocuments(es elastic.Client, indexName string, batches int) (strings.Builder, error) {

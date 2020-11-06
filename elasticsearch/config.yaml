@@ -7,14 +7,16 @@ s3:
   #chunksize: 32
   cacert: "./certs/s3.pem"
 elastic:
-  #addr: "http://localhost:9200"
-  addr: "http://localhost:9201"
+  ## INSTANCE 1
+  addr: "http://localhost:9200"
+  ## INSTANCE 2
+  #addr: "http://localhost:9201"
   user: "elastic"
   password: "elastic"
-  #index: "my-test-index"
-  index: "my-test-index-mon-jan-6-11-26-58"
+  ## Index to dump/load
+  index: "myoldindex-mon-jan-6-15-38-35"
 vault:
   addr: "http://localhost:8282"
-  token: "s.lepNY18TQPM1QRZR9kW1DAhS"
+  token: "s.b9Ak3BEkxYlBw2EmcTod0NP1"
   transitpath: "transit"
   key: "transit"
