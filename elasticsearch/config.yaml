@@ -2,21 +2,19 @@ s3:
   url: "https://localhost"
   port: 9000
   accesskey: "myaccesskey"
-  secretkey: "mysecretkey!0"
+  secretkey: "mysecretkey"
   bucket: "dumps"
   #chunksize: 32
-  cacert: "./certs/s3.pem"
+  cacert: "./certs/ca.pem"
 elastic:
   ## INSTANCE 1
-  addr: "http://localhost:9200"
+  addr: "http://localhost:9201"
   ## INSTANCE 2
   #addr: "http://localhost:9201"
   user: "elastic"
   password: "elastic"
-  ## Index to dump/load
-  index: "myoldindex-mon-jan-6-15-38-35"
 vault:
   addr: "http://localhost:8282"
-  token: "s.b9Ak3BEkxYlBw2EmcTod0NP1"
+  token: "s.S3A11UpB3LYPvKQCcMsWouRL"
   transitpath: "transit"
   key: "transit"

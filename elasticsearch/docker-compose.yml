@@ -5,7 +5,7 @@ services:
     container_name: mys3
     environment:
       - MINIO_ACCESS_KEY=myaccesskey
-      - MINIO_SECRET_KEY=mysecretkey!0
+      - MINIO_SECRET_KEY=mysecretkey
     healthcheck:
       test: ["CMD", "curl", "-fkq", "https://localhost:9000/minio/health/live"]
       interval: 5s

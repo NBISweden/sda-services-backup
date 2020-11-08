@@ -1,10 +1,12 @@
 package main
 
 import (
+	"flag"
 	"path"
 	"strings"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )
 
@@ -24,6 +26,21 @@ func NewConfig() *Config {
 	c.readConfig()
 
 	return c
+}
+
+// getCLflags returns the CL args of indexName and action
+func getCLflags() (string, string) {
+	flag.String("action", "create", "action can be create, dump or load")
+	flag.String("index", "index123", "index name to create, dump or load")
+
+	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
+	pflag.Parse()
+	viper.BindPFlags(pflag.CommandLine)
+
+	indexName := viper.GetString("index")
+	action := viper.GetString("action")
+	return indexName, action
+
 }
 
 // configS3Storage populates a S3Config
@@ -72,7 +89,6 @@ func configElastic() ElasticConfig {
 	elastic.Addr = viper.GetString("elastic.addr")
 	elastic.User = viper.GetString("elastic.user")
 	elastic.Password = viper.GetString("elastic.password")
-	elastic.Index = viper.GetString("elastic.index")
 
 	return elastic
 }

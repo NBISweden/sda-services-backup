@@ -2,7 +2,6 @@ package main
 
 import (
 	"io"
-	"os"
 	"strings"
 	"time"
 
@@ -14,18 +13,9 @@ import (
 )
 
 func main() {
-	var iname string
-	inarg := os.Args[1]
 
-	if inarg == "" || (inarg != "load" && inarg != "dump" && inarg != "index") {
-		log.Fatal("Failed to start script. You need to provide [dump/load/index i_name] ")
-	}
-	if inarg == "index" {
-		iname = os.Args[2]
-		if iname == "" {
-			log.Fatal("Failed to start script. You need to provide an index name")
-		}
-	}
+	indexName, action := getCLflags()
+
 	conf := NewConfig()
 	log.Info(conf.S3)
 	sb, err := newS3Backend(conf.S3)
@@ -55,13 +45,14 @@ func main() {
 		MaxRetries: 5,
 	})
 
-	if inarg == "load" {
-		log.Infof("Loading index %s into ES", conf.Elastic.Index)
-		loadData(*sb, *c, *vc, conf.Elastic.Index, conf.Vault.TransitMountPath, conf.Vault.Key)
-	} else if inarg == "dump" {
-		dumpData(*sb, *c, *vc, conf.Elastic.Index, conf.Vault.TransitMountPath, conf.Vault.Key)
-	} else if inarg == "index" {
-		indexName := iname + "-" + time.Now().Format("mon-jan-2-15-04-05")
+	switch action {
+	case "load":
+		log.Infof("Loading index %s into ES", indexName)
+		loadData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+	case "dump":
+		dumpData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+	case "create":
+		indexName := indexName + "-" + time.Now().Format("mon-jan-2-15-04-05")
 		log.Infof("Dumping index %s into ES", indexName)
 		indexDocuments(*c, indexName)
 	}
@@ -92,18 +83,24 @@ func dumpData(sb s3Backend, ec elastic.Client, vc vault.Client, indexName string
 		log.Error(err)
 	}
 
-	encryptIndex(&vc, documents.String(), mountPath, keyName)
-	wr, err := sb.NewFileWriter("thisisatest")
+	encIndex := encryptIndex(&vc, documents.String(), mountPath, keyName)
+	wr, err := sb.NewFileWriter(indexName + ".bup")
 
 	if err != nil {
 		log.Info(err)
 	}
-	wr.Write([]byte("asd"))
+
+	_, err = wr.Write([]byte(encIndex))
+	if err != nil {
+		log.Info(err)
+	}
+
+	time.Sleep(time.Second * 10)
+	if err != nil {
+		log.Info(err)
+	}
 	wr.Close()
-
-	if err != nil {
-		log.Info(err)
-	}
+	time.Sleep(time.Second * 5)
 
 	log.Info("Done dumping data to S3")
 }
