@@ -8,13 +8,13 @@ s3:
   cacert: "./certs/ca.pem"
 elastic:
   ## INSTANCE 1
-  addr: "http://localhost:9201"
+  addr: "http://localhost:9200"
   ## INSTANCE 2
   #addr: "http://localhost:9201"
   user: "elastic"
   password: "elastic"
 vault:
   addr: "http://localhost:8282"
-  token: "s.S3A11UpB3LYPvKQCcMsWouRL"
+  token: "s.WE5G3EXMwAXIKaUefWhHJUb0"
   transitpath: "transit"
   key: "transit"
