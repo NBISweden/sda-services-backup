@@ -42,7 +42,7 @@ func getKey(c *vault.Client, mountpath string, key string) string {
 
 	decodedKey, err := base64.StdEncoding.DecodeString(exportRes.Data.Keys[1])
 	if err != nil {
-		log.Fatalf("Error occurred during encryption: %v", err)
+		log.Fatalf("Error occurred during decoding: %v", err)
 	}
 
 	return string(decodedKey)
