@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -41,9 +40,6 @@ func getKey(c *vault.Client, mountpath string, key string) string {
 		log.Fatal(err)
 	}
 
-	log.Printf("all keys : %v+", exportRes.Data.Keys)
-	log.Printf("%v+", exportRes.Data.Keys[1])
-
 	decodedKey, err := base64.StdEncoding.DecodeString(exportRes.Data.Keys[1])
 	if err != nil {
 		log.Fatal(err)
@@ -53,7 +49,6 @@ func getKey(c *vault.Client, mountpath string, key string) string {
 }
 
 func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
-	log.Info(hits.Raw)
 	var res strings.Builder
 	fmt.Fprintf(&res, "%s\n", hits.Raw)
 	plainText := []byte(res.String())
@@ -70,7 +65,6 @@ func decryptDocs(rc io.ReadCloser, key []byte) string {
 	buf := new(bytes.Buffer)
 	_, err := buf.ReadFrom(rc)
 	data := buf.Bytes()
-	log.Info(data)
 	if err != nil {
 		log.Error(err)
 	}
@@ -90,9 +84,6 @@ func getStreamEncryptor(key []byte) cipher.Stream {
 		log.Fatal(err)
 	}
 	var iv [aes.BlockSize]byte
-	if _, err := io.ReadFull(rand.Reader, iv[:]); err != nil {
-		panic(err)
-	}
 	if err != nil {
 		log.Fatal(err)
 	}

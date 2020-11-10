@@ -134,7 +134,16 @@ func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, k
 	key := getKey(&vc, mountpath, keyName)
 	ud := decryptDocs(fr, []byte(key))
 
-	log.Info(ud)
+	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
+		Index:         indexName,
+		Client:        &c,
+		NumWorkers:    1,
+		FlushBytes:    int(2048),
+		FlushInterval: 30 * time.Second,
+	})
+	if err != nil {
+		log.Fatalf("Unexpected error: %s", err)
+	}
 
 	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
@@ -144,14 +153,6 @@ func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, k
 		for i := 0; i < batches; i++ {
 			key := fmt.Sprintf("%v._source", i)
 			source := gjson.Get(docs, key).String()
-
-			bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
-				Index:         indexName,
-				Client:        &c,
-				NumWorkers:    1,
-				FlushBytes:    int(2048),
-				FlushInterval: 30 * time.Second,
-			})
 
 			err = bi.Add(
 				context.Background(),

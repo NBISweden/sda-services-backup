@@ -8,7 +8,7 @@ s3:
   cacert: "./certs/ca.pem"
 elastic:
   ## INSTANCE 1
-  addr: "http://localhost:9201"
+  addr: "http://localhost:9200"
   ## INSTANCE 2
   #addr: "http://localhost:9201"
   user: "elastic"
