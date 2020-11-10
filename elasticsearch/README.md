@@ -1,7 +1,7 @@
 # Elasticsearch backups
 
-## Vault
-Enable the transit encryption engine and create a key called `transit`.
+## Create a key
+Enable the transit encryption engine and create a key. Give it a descriptive name.
 
 ## Create some indices in ES
 ```sh
@@ -15,12 +15,12 @@ s3cmd ls -c s3conf s3://dumps
 s3cmd get -c s3conf s3://dumps/indexname
 ```
 
-## Loading index from S3 to
+## Loading index from S3 to ES
 ```sh
 ./main --action load --index index123-mon-jan-8-17-43-24
 ```
 
-## Script configuration
+## Example script configuration
 ```yaml
 s3:
   url: "https://localhost"
@@ -39,7 +39,7 @@ elastic:
   password: "elastic"
 vault:
   addr: "http://localhost:8282"
-  token: "s.S3A11UpB3LYPvKQCcMsWouRL"
+  token: ""
   transitpath: "transit"
   key: "transit"
 ```
