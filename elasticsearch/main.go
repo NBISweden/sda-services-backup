@@ -53,6 +53,7 @@ func main() {
 		log.Infof("Loading index %s into %s", indexName, conf.Elastic.Addr)
 		loadData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
 	case "dump":
+		countDocuments(*c, indexName)
 		log.Infof("Dumping index %s into %s", indexName, conf.Elastic.Addr)
 		dumpData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
 	case "create":

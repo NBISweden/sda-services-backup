@@ -30,29 +30,7 @@ func readResponse(r io.Reader) string {
 	return b.String()
 }
 
-func uploadBatch(wr io.WriteCloser, hits string) {
-
-	_, err := wr.Write([]byte(hits))
-	if err != nil {
-		log.Info(err)
-	}
-
-	time.Sleep(time.Second * 2)
-	if err != nil {
-		log.Info(err)
-	}
-
-	log.Info("Done dumping batch to S3")
-}
-
-func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, key, mountpath string, batches int) error {
-
-	var (
-		batchNum int
-		scrollID string
-	)
-
-	wr, err := sb.NewFileWriter(indexName + ".bup")
+func countDocuments(es elastic.Client, indexName string) error {
 
 	log.Infoln("Couting documents to fetch...")
 	log.Infoln(strings.Repeat("-", 80))
@@ -69,9 +47,23 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 
 	log.Infof("Found %v documents", count)
 
-	es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
+	return err
+}
+
+func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
+
+	var (
+		batchNum int
+		scrollID string
+	)
+
+	wr, err := sb.NewFileWriter(indexName + ".bup")
+	key := getKey(&vc, mountpath, keyName)
+	stream := getStreamEncryptor([]byte(key))
 
 	log.Infoln("Scrolling through the documents...")
+
+	es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
 
 	res, err := es.Search(
 		es.Search.WithIndex(indexName),
@@ -84,13 +76,11 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 		log.Error(err)
 	}
 
-	json = readResponse(res.Body)
+	json := readResponse(res.Body)
 
 	hits := gjson.Get(json, "hits.hits")
 
-	encIndex := encryptDocuments(&vc, hits.Raw, mountpath, key)
-
-	uploadBatch(wr, encIndex)
+	encryptDocs(hits, stream, wr)
 
 	log.Info("Batch   ", batchNum)
 	log.Debug("ScrollID", scrollID)
@@ -122,39 +112,31 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 			log.Infoln("Finished scrolling")
 			break
 		} else {
-			encIndex := encryptDocuments(&vc, hits.Raw+"\n", mountpath, key)
-			uploadBatch(wr, encIndex)
+			encryptDocs(hits, stream, wr)
 			log.Info("Batch   ", batchNum)
 			log.Debug("ScrollID", scrollID)
 			log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
 			log.Debug(strings.Repeat("-", 80))
 		}
 	}
-
 	wr.Close()
-	time.Sleep(time.Second * 5)
+	time.Sleep(time.Second * 8)
 	return err
 }
 
-func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, key, mountpath string, batches int) error {
+func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
 	var countSuccessful uint64
-	var ud strings.Builder
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
-	b := make([]byte, 10000)
-	for {
-		_, err := fr.Read(b)
-		if err == io.EOF {
-			break
-		}
-		log.Info(string(b))
-		res := decryptDocuments(&vc, string(b), mountpath, key)
-		ud.WriteString(res)
-		b = nil
+	if err != nil {
+		log.Error(err)
 	}
-	log.Info(ud.String())
+	key := getKey(&vc, mountpath, keyName)
+	ud := decryptDocs(fr, []byte(key))
 
-	for _, docs := range strings.Split(ud.String(), "\n") {
+	log.Info(ud)
+
+	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
 			log.Info("End of blob reached")
 			break
@@ -193,5 +175,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, k
 			}
 		}
 	}
+	fr.Close()
+	time.Sleep(time.Second * 8)
 	return err
 }
