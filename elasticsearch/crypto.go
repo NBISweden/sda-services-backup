@@ -68,36 +68,42 @@ func decryptDocs(rc io.ReadCloser, key []byte) string {
 	if err != nil {
 		log.Error(err)
 	}
-
-	stream := getStreamDecryptor(key)
+	iv := make([]byte, aes.BlockSize)
+	fi := bytes.NewReader(data)
+	log.Info(fi)
+	msgLen := fi.Size() - int64(len(iv))
+	log.Info(msgLen)
+	_, err = fi.ReadAt(iv, msgLen)
+	log.Info(iv)
+	stream := getStreamDecryptor(key, iv)
 
 	// XORKeyStream can work in-place if the two arguments are the same.
 	stream.XORKeyStream(data, data)
 
 	out := string(data)
+	log.Info(out)
 	return out
 }
 
-func getStreamEncryptor(key []byte) cipher.Stream {
+func getStreamEncryptor(key []byte, iv []byte) cipher.Stream {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var iv [aes.BlockSize]byte
 	if err != nil {
 		log.Fatal(err)
 	}
-	stream := cipher.NewCFBEncrypter(block, iv[:])
+	stream := cipher.NewCTR(block, iv)
 
 	return stream
 }
 
-func getStreamDecryptor(key []byte) cipher.Stream {
+func getStreamDecryptor(key []byte, iv []byte) cipher.Stream {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var iv [aes.BlockSize]byte
-	stream := cipher.NewCFBDecrypter(block, iv[:])
+
+	stream := cipher.NewCTR(block, iv)
 	return stream
 }

@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/rand"
 	"fmt"
 	"io"
 	"strings"
@@ -59,7 +61,11 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 
 	wr, err := sb.NewFileWriter(indexName + ".bup")
 	key := getKey(&vc, mountpath, keyName)
-	stream := getStreamEncryptor([]byte(key))
+	iv := make([]byte, aes.BlockSize)
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		log.Fatal(err)
+	}
+	stream := getStreamEncryptor([]byte(key), iv)
 
 	log.Infoln("Scrolling through the documents...")
 
@@ -119,6 +125,7 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 			log.Debug(strings.Repeat("-", 80))
 		}
 	}
+	wr.Write(iv)
 	wr.Close()
 	time.Sleep(time.Second * 8)
 	return err
