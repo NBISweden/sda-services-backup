@@ -63,21 +63,21 @@ func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
 }
 
 func decryptDocs(rc io.ReadCloser, key []byte) string {
-	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(rc)
-	data := buf.Bytes()
-	if err != nil {
-		log.Error(err)
-	}
-
 	iv := make([]byte, aes.BlockSize)
-	_, err = io.ReadFull(rc, iv)
+	_, err := io.ReadFull(rc, iv)
 
 	if err != nil {
 		log.Fatalf("Reading iv from stream failed: %v", err)
 	}
 
 	stream := getStreamDecryptor(iv, key)
+
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(rc)
+	data := buf.Bytes()
+	if err != nil {
+		log.Error(err)
+	}
 
 	// XORKeyStream can work in-place if the two arguments are the same.
 	stream.XORKeyStream(data, data)
