@@ -133,6 +133,7 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 
 func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
 	var countSuccessful uint64
+	ctx := context.Background()
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
 	if err != nil {
@@ -183,6 +184,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, k
 			}
 		}
 	}
+	bi.Close(ctx)
 	fr.Close()
 	time.Sleep(time.Second * 8)
 	return err

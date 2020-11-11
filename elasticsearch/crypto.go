@@ -70,18 +70,14 @@ func decryptDocs(rc io.ReadCloser, key []byte) string {
 	}
 	iv := make([]byte, aes.BlockSize)
 	fi := bytes.NewReader(data)
-	log.Info(fi)
 	msgLen := fi.Size() - int64(len(iv))
-	log.Info(msgLen)
 	_, err = fi.ReadAt(iv, msgLen)
-	log.Info(iv)
 	stream := getStreamDecryptor(key, iv)
 
 	// XORKeyStream can work in-place if the two arguments are the same.
 	stream.XORKeyStream(data, data)
 
-	out := string(data)
-	log.Info(out)
+	out := string(data[:msgLen])
 	return out
 }
 
