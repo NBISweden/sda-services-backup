@@ -5,13 +5,13 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"time"
 
 	elastic "github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
+	vault "github.com/mittwald/vaultgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -30,51 +30,10 @@ func readResponse(r io.Reader) string {
 	return b.String()
 }
 
-func indexDocuments(es elastic.Client, indexName string) {
-	log.Println("Indexing the documents...")
-	for i := 1; i <= 2000; i++ {
-		res, err := es.Index(
-			indexName,
-			strings.NewReader(`{"title" : "test"}`),
-			es.Index.WithDocumentID(strconv.Itoa(i)),
-		)
+func countDocuments(es elastic.Client, indexName string) error {
 
-		if err != nil || res.IsError() {
-			log.Error("Error happens here")
-			log.Fatalf("Error: %s: %s", err, res)
-		}
-	}
-	time.Sleep(time.Second * 4)
-}
-
-func checkDocuments(es elastic.Client, indexName string) {
-	res, err := es.Search(
-		es.Search.WithIndex(indexName),
-		es.Search.WithSize(10),
-		es.Search.WithSort("_doc"),
-	)
-
-	if err != nil {
-		log.Error(err)
-	}
-
-	json := readResponse(res.Body)
-	res.Body.Close()
-
-	hits := gjson.Get(json, "hits.hits")
-	log.Info(hits)
-
-}
-
-func getDocuments(es elastic.Client, indexName string, batches int) (strings.Builder, error) {
-
-	var (
-		batchNum int
-		scrollID string
-	)
-
-	log.Println("Couting documents to fetch...")
-	log.Println(strings.Repeat("-", 80))
+	log.Infoln("Couting documents to fetch...")
+	log.Infoln(strings.Repeat("-", 80))
 	cr, err := es.Count(es.Count.WithIndex(indexName))
 
 	if err != nil {
@@ -86,12 +45,25 @@ func getDocuments(es elastic.Client, indexName string, batches int) (strings.Bui
 
 	count := int(gjson.Get(json, "count").Int())
 
-	log.Printf("Found %v documents", count)
+	log.Infof("Found %v documents", count)
+
+	return err
+}
+
+func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
+
+	var (
+		batchNum int
+		scrollID string
+	)
+
+	wr, err := sb.NewFileWriter(indexName + ".bup")
+	key := getKey(&vc, mountpath, keyName)
+	stream := getStreamEncryptor([]byte(key))
+
+	log.Infoln("Scrolling through the documents...")
 
 	es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
-
-	log.Println("Scrolling...")
-	log.Println(strings.Repeat("-", 80))
 
 	res, err := es.Search(
 		es.Search.WithIndex(indexName),
@@ -104,29 +76,22 @@ func getDocuments(es elastic.Client, indexName string, batches int) (strings.Bui
 		log.Error(err)
 	}
 
-	var results strings.Builder
-
-	json = readResponse(res.Body)
-	res.Body.Close()
+	json := readResponse(res.Body)
 
 	hits := gjson.Get(json, "hits.hits")
 
-	fmt.Fprintf(&results, "%s\n", hits.Raw)
+	encryptDocs(hits, stream, wr)
 
-	log.Println("Batch   ", batchNum)
-	log.Println("ScrollID", scrollID)
-	log.Println("IDs     ", gjson.Get(hits.Raw, "#._id"))
-	log.Println(strings.Repeat("-", 80))
+	log.Info("Batch   ", batchNum)
+	log.Debug("ScrollID", scrollID)
+	log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
+	log.Debug(strings.Repeat("-", 80))
 
 	scrollID = gjson.Get(json, "_scroll_id").String()
 
-	// Perform the scroll requests in sequence
-	//
 	for {
 		batchNum++
 
-		// Perform the scroll request and pass the scrollID and scroll duration
-		//
 		res, err := es.Scroll(es.Scroll.WithScrollID(scrollID), es.Scroll.WithScroll(time.Minute))
 		if err != nil {
 			log.Fatalf("Error: %s", err)
@@ -138,34 +103,36 @@ func getDocuments(es elastic.Client, indexName string, batches int) (strings.Bui
 		json = readResponse(res.Body)
 		res.Body.Close()
 
-		// Extract the scrollID from response
-		//
 		scrollID = gjson.Get(json, "_scroll_id").String()
 
-		// Extract the search results
-		//
 		hits := gjson.Get(json, "hits.hits")
-		log.Info(hits)
+		log.Debug(hits)
 
-		// Break out of the loop when there are no results
-		//
 		if len(hits.Array()) < 1 {
-			log.Println("Finished scrolling")
+			log.Infoln("Finished scrolling")
 			break
 		} else {
-			fmt.Fprintf(&results, "%s\n", hits.Raw)
-
-			log.Println("Batch   ", batchNum)
-			log.Println("ScrollID", scrollID)
-			log.Println("IDs     ", gjson.Get(hits.Raw, "#._id"))
-			log.Println(strings.Repeat("-", 80))
+			encryptDocs(hits, stream, wr)
+			log.Info("Batch   ", batchNum)
+			log.Debug("ScrollID", scrollID)
+			log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
+			log.Debug(strings.Repeat("-", 80))
 		}
 	}
-	return results, err
+	wr.Close()
+	time.Sleep(time.Second * 8)
+	return err
 }
 
-func bulkDocuments(c elastic.Client, indexName, documents string, batches int) error {
+func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
 	var countSuccessful uint64
+
+	fr, err := sb.NewFileReader(indexName + ".bup")
+	if err != nil {
+		log.Error(err)
+	}
+	key := getKey(&vc, mountpath, keyName)
+	ud := decryptDocs(fr, []byte(key))
 
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         indexName,
@@ -174,8 +141,11 @@ func bulkDocuments(c elastic.Client, indexName, documents string, batches int) e
 		FlushBytes:    int(2048),
 		FlushInterval: 30 * time.Second,
 	})
+	if err != nil {
+		log.Fatalf("Unexpected error: %s", err)
+	}
 
-	for _, docs := range strings.Split(documents, "\n") {
+	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
 			log.Info("End of blob reached")
 			break
@@ -183,6 +153,7 @@ func bulkDocuments(c elastic.Client, indexName, documents string, batches int) e
 		for i := 0; i < batches; i++ {
 			key := fmt.Sprintf("%v._source", i)
 			source := gjson.Get(docs, key).String()
+
 			err = bi.Add(
 				context.Background(),
 				esutil.BulkIndexerItem{
@@ -205,5 +176,7 @@ func bulkDocuments(c elastic.Client, indexName, documents string, batches int) e
 			}
 		}
 	}
+	fr.Close()
+	time.Sleep(time.Second * 8)
 	return err
 }

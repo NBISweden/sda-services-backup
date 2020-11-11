@@ -1,9 +1,6 @@
 package main
 
 import (
-	"io"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/cenkalti/backoff"
@@ -15,18 +12,15 @@ import (
 
 func main() {
 
-	inarg := os.Args[1]
-
-	if inarg == "" || (inarg != "load" && inarg != "dump") {
-		log.Fatal("Failed to start script. You need to provide [dump/load] ")
-	}
+	indexName, action := getCLflags()
 
 	conf := NewConfig()
-	log.Info(conf.S3)
+	log.Debug(conf.S3)
+
 	sb, err := newS3Backend(conf.S3)
 
 	if err != nil {
-		log.Error(err)
+		log.Fatal(err)
 	}
 
 	vcfg := VaultConfig{Addr: conf.Vault.Addr, Token: conf.Vault.Token}
@@ -50,57 +44,39 @@ func main() {
 		MaxRetries: 5,
 	})
 
-	if inarg == "load" {
-		log.Infof("Loading index %s into ES", conf.Elastic.Index)
-		loadData(*sb, *c, *vc, conf.Elastic.Index)
-	} else if inarg == "dump" {
-		indexName := conf.Elastic.Index + "-" + time.Now().Format("mon-jan-2-15-04-05")
-		log.Infof("Dumping index %s into ES", indexName)
-		dumpData(*sb, *c, *vc, indexName)
-	}
-}
-
-func loadData(sb s3Backend, ec elastic.Client, vc vault.Client, indexName string) {
-	batches := 5
-	fr, err := sb.NewFileReader(indexName + ".bup")
-
 	if err != nil {
-		log.Error("Unable to read from S3")
-		return
+		log.Fatal(err)
 	}
 
-	buf := new(strings.Builder)
-	_, err = io.Copy(buf, fr)
-	plaintext := descryptIndex(&vc, buf.String(), "transit", "transit")
-
-	bulkDocuments(ec, indexName, plaintext, batches)
-	log.Info("Done loading data from S3")
-
+	switch action {
+	case "load":
+		log.Infof("Loading index %s into %s", indexName, conf.Elastic.Addr)
+		loadData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+	case "dump":
+		countDocuments(*c, indexName)
+		log.Infof("Dumping index %s into %s", indexName, conf.Elastic.Addr)
+		dumpData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+	case "create":
+		indexName := indexName + "-" + time.Now().Format("mon-jan-2-15-04-05")
+		log.Infof("Creating index %s in %s", indexName, conf.Elastic.Addr)
+		indexDocuments(*c, indexName)
+	}
 }
-func dumpData(sb s3Backend, ec elastic.Client, vc vault.Client, indexName string) {
+
+func loadData(sb s3Backend, ec elastic.Client, vc vault.Client, indexName string, mountPath string, keyName string) {
 	batches := 5
-	indexDocuments(ec, indexName)
-
-	time.Sleep(time.Second * 10)
-
-	documents, err := getDocuments(ec, indexName, batches)
-
+	err := bulkDocuments(sb, ec, vc, indexName, keyName, mountPath, batches)
 	if err != nil {
 		log.Error(err)
 	}
+	log.Info("Done loading data from S3")
 
-	encIndex := encryptIndex(&vc, documents.String(), "transit", "transit")
-	wr, err := sb.NewFileWriter(indexName + ".bup")
-
+}
+func dumpData(sb s3Backend, ec elastic.Client, vc vault.Client, indexName string, mountPath string, keyName string) {
+	batches := 5
+	err := getDocuments(sb, ec, vc, indexName, keyName, mountPath, batches)
 	if err != nil {
-		log.Info(err)
+		log.Error(err)
 	}
-	wr.Write([]byte(encIndex))
-	wr.Close()
-
-	if err != nil {
-		log.Info(err)
-	}
-
 	log.Info("Done dumping data to S3")
 }

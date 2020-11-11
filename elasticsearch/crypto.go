@@ -1,11 +1,17 @@
 package main
 
 import (
+	"bytes"
+	"crypto/aes"
+	"crypto/cipher"
+	"encoding/base64"
 	"fmt"
+	"io"
+	"strings"
 
 	vault "github.com/mittwald/vaultgo"
 	log "github.com/sirupsen/logrus"
-	"gopkg.in/guregu/null.v3"
+	"github.com/tidwall/gjson"
 )
 
 // VaultConfig holds Vault settings
@@ -16,20 +22,9 @@ type VaultConfig struct {
 	Key              string
 }
 
-func encryptIndex(c *vault.Client, index string, mountpath string, key string) string {
-	const rsa4096 = "rsa-4096"
-
-	fmt.Println(c.Token())
+func getKey(c *vault.Client, mountpath string, key string) string {
 
 	transit := c.TransitWithMountPoint(mountpath)
-
-	err := transit.Create(key, &vault.TransitCreateOptions{
-		Exportable: null.BoolFrom(true),
-		Type:       rsa4096,
-	})
-	if err != nil {
-		log.Fatal(err)
-	}
 
 	res, err := transit.Read(key)
 	if err != nil {
@@ -44,31 +39,65 @@ func encryptIndex(c *vault.Client, index string, mountpath string, key string) s
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("%v+", exportRes.Data.Keys[1])
 
-	encryptResponse, err := transit.Encrypt(key, &vault.TransitEncryptOptions{
-		Plaintext: index,
-	})
-
+	decodedKey, err := base64.StdEncoding.DecodeString(exportRes.Data.Keys[1])
 	if err != nil {
-		log.Fatalf("Error occurred during encryption: %v", err)
+		log.Fatalf("Error occurred during decoding: %v", err)
 	}
 
-	return encryptResponse.Data.Ciphertext
+	return string(decodedKey)
 }
 
-func descryptIndex(c *vault.Client, encIndex string, mountpath string, key string) string {
+func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
+	var res strings.Builder
+	fmt.Fprintf(&res, "%s\n", hits.Raw)
+	plainText := []byte(res.String())
+	cipherText := make([]byte, len(plainText))
+	stream.XORKeyStream(cipherText, plainText)
 
-	const rsa4096 = "rsa-4096"
-
-	transit := c.TransitWithMountPoint(mountpath)
-
-	decryptResponse, err := transit.Decrypt(key, &vault.TransitDecryptOptions{
-		Ciphertext: encIndex,
-	})
-	if err != nil {
-		log.Fatalf("Error occurred during decryption: %v", err)
+	if _, err := io.Copy(fr, bytes.NewReader(cipherText)); err != nil {
+		log.Fatal(err)
 	}
 
-	return decryptResponse.Data.Plaintext
+}
+
+func decryptDocs(rc io.ReadCloser, key []byte) string {
+	buf := new(bytes.Buffer)
+	_, err := buf.ReadFrom(rc)
+	data := buf.Bytes()
+	if err != nil {
+		log.Error(err)
+	}
+
+	stream := getStreamDecryptor(key)
+
+	// XORKeyStream can work in-place if the two arguments are the same.
+	stream.XORKeyStream(data, data)
+
+	out := string(data)
+	return out
+}
+
+func getStreamEncryptor(key []byte) cipher.Stream {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var iv [aes.BlockSize]byte
+	if err != nil {
+		log.Fatal(err)
+	}
+	stream := cipher.NewCFBEncrypter(block, iv[:])
+
+	return stream
+}
+
+func getStreamDecryptor(key []byte) cipher.Stream {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var iv [aes.BlockSize]byte
+	stream := cipher.NewCFBDecrypter(block, iv[:])
+	return stream
 }

@@ -1,6 +1,6 @@
 [default]
 access_key = myaccesskey
-secret_key = mysecretkey!0
+secret_key = mysecretkey
 check_ssl_certificate = False
 guess_mime_type = True
 host_base = https://localhost:9000
