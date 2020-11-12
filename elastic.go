@@ -18,7 +18,6 @@ import (
 
 // ElasticConfig is a Struct that holds ElasticSearch config
 type ElasticConfig struct {
-	Addr     string
 	User     string
 	Password string
 	Index    string

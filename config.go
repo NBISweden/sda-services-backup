@@ -10,6 +10,13 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ClFlags is an struc that holds cl flags info
+type ClFlags struct {
+	indexName string
+	action    string
+	instance  string
+}
+
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	Elastic ElasticConfig
@@ -29,9 +36,11 @@ func NewConfig() *Config {
 }
 
 // getCLflags returns the CL args of indexName and action
-func getCLflags() (string, string) {
+func getCLflags() ClFlags {
+
 	flag.String("action", "create", "action can be create, dump or load")
 	flag.String("index", "index123", "index name to create, dump or load")
+	flag.String("instance", "http://127.0.0.1:9200", "elasticsearch instance to perform the action")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -39,7 +48,9 @@ func getCLflags() (string, string) {
 
 	indexName := viper.GetString("index")
 	action := viper.GetString("action")
-	return indexName, action
+	instance := viper.GetString("instance")
+
+	return ClFlags{indexName: indexName, action: action, instance: instance}
 
 }
 
@@ -86,7 +97,6 @@ func configVault() VaultConfig {
 // configElastic populates a ElasticConfig
 func configElastic() ElasticConfig {
 	elastic := ElasticConfig{}
-	elastic.Addr = viper.GetString("elastic.addr")
 	elastic.User = viper.GetString("elastic.user")
 	elastic.Password = viper.GetString("elastic.password")
 

@@ -12,7 +12,7 @@ import (
 
 func main() {
 
-	indexName, action := getCLflags()
+	flags := getCLflags()
 
 	conf := NewConfig()
 	log.Debug(conf.S3)
@@ -28,11 +28,11 @@ func main() {
 
 	retryBackoff := backoff.NewExponentialBackOff()
 
-	ecfg := ElasticConfig{Addr: conf.Elastic.Addr, User: conf.Elastic.User, Password: conf.Elastic.Password}
+	ecfg := ElasticConfig{User: conf.Elastic.User, Password: conf.Elastic.Password}
 
 	c, err := elastic.NewClient(elasticsearch.Config{
 		Addresses: []string{
-			ecfg.Addr,
+			flags.instance,
 		},
 		RetryOnStatus: []int{502, 503, 504, 429},
 		RetryBackoff: func(i int) time.Duration {
@@ -48,17 +48,17 @@ func main() {
 		log.Fatal(err)
 	}
 
-	switch action {
+	switch flags.action {
 	case "load":
-		log.Infof("Loading index %s into %s", indexName, conf.Elastic.Addr)
-		loadData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+		log.Infof("Loading index %s into %s", flags.indexName, flags.instance)
+		loadData(*sb, *c, *vc, flags.indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
 	case "dump":
-		countDocuments(*c, indexName)
-		log.Infof("Dumping index %s into %s", indexName, conf.Elastic.Addr)
-		dumpData(*sb, *c, *vc, indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
+		countDocuments(*c, flags.indexName)
+		log.Infof("Dumping index %s into %s", flags.indexName, flags.instance)
+		dumpData(*sb, *c, *vc, flags.indexName, conf.Vault.TransitMountPath, conf.Vault.Key)
 	case "create":
-		indexName := indexName + "-" + time.Now().Format("mon-jan-2-15-04-05")
-		log.Infof("Creating index %s in %s", indexName, conf.Elastic.Addr)
+		indexName := flags.indexName + "-" + "test"
+		log.Infof("Creating index %s in %s", indexName, flags.instance)
 		indexDocuments(*c, indexName)
 	}
 }

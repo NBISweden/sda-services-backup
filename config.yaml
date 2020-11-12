@@ -7,10 +7,6 @@ s3:
   #chunksize: 32
   cacert: "./certs/ca.pem"
 elastic:
-  ## INSTANCE 1
-  addr: "http://localhost:9200"
-  ## INSTANCE 2
-  #addr: "http://localhost:9201"
   user: "elastic"
   password: "elastic"
 vault:
