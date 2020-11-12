@@ -20,8 +20,8 @@ type ClFlags struct {
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	Elastic ElasticConfig
-	Vault   VaultConfig
 	S3      S3Config
+	keyPath string
 }
 
 // NewConfig initializes and parses the config file and/or environment using
@@ -83,17 +83,6 @@ func configS3Storage() S3Config {
 	return s3
 }
 
-// configVault populates a VaultConfig
-func configVault() VaultConfig {
-	vault := VaultConfig{}
-	vault.Addr = viper.GetString("vault.addr")
-	vault.Token = viper.GetString("vault.token")
-	vault.TransitMountPath = viper.GetString("vault.transitpath")
-	vault.Key = viper.GetString("vault.key")
-
-	return vault
-}
-
 // configElastic populates a ElasticConfig
 func configElastic() ElasticConfig {
 	elastic := ElasticConfig{}
@@ -109,7 +98,7 @@ func (c *Config) readConfig() {
 
 	c.Elastic = configElastic()
 
-	c.Vault = configVault()
+	c.keyPath = viper.GetString("key")
 
 	if viper.IsSet("log.level") {
 		stringLevel := viper.GetString("log.level")

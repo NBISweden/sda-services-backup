@@ -8,9 +8,9 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"strings"
 
-	vault "github.com/mittwald/vaultgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -23,32 +23,17 @@ type VaultConfig struct {
 	Key              string
 }
 
-func getKey(c *vault.Client, mountpath string, key string) string {
-
-	transit := c.TransitWithMountPoint(mountpath)
-
-	res, err := transit.Read(key)
+func getKey(key string) []byte {
+	data, err := ioutil.ReadFile(key)
 	if err != nil {
-		log.Fatal(err)
-	} else {
-		log.Printf("%+v\n", res.Data)
+		log.Fatalf("Could not load cipher key: %s", err)
 	}
-
-	exportRes, err := transit.Export(key, vault.TransitExportOptions{
-		KeyType: "encryption-key",
-	})
+	decodedkey, err := base64.StdEncoding.DecodeString(string(data))
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("Could not decode base64 key: %s", err)
 	}
-
-	decodedKey, err := base64.StdEncoding.DecodeString(exportRes.Data.Keys[1])
-	if err != nil {
-		log.Fatalf("Error occurred during decoding: %v", err)
-	}
-
-	return string(decodedKey)
+	return decodedkey
 }
-
 func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
 	var res strings.Builder
 	fmt.Fprintf(&res, "%s\n", hits.Raw)

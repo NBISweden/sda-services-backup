@@ -11,7 +11,6 @@ import (
 
 	elastic "github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
-	vault "github.com/mittwald/vaultgo"
 	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
 )
@@ -49,7 +48,7 @@ func countDocuments(es elastic.Client, indexName string) error {
 	return err
 }
 
-func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
+func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, batches int) error {
 
 	var (
 		batchNum int
@@ -57,7 +56,7 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 	)
 
 	wr, err := sb.NewFileWriter(indexName + ".bup")
-	key := getKey(&vc, mountpath, keyName)
+	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))
 
 	l, err := wr.Write(iv)
@@ -129,14 +128,14 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 	return err
 }
 
-func bulkDocuments(sb s3Backend, c elastic.Client, vc vault.Client, indexName, keyName, mountpath string, batches int) error {
+func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, batches int) error {
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
 	if err != nil {
 		log.Error(err)
 	}
-	key := getKey(&vc, mountpath, keyName)
+	key := getKey(keyPath)
 	ud := decryptDocs(fr, []byte(key))
 
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{

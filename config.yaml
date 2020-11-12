@@ -1,3 +1,4 @@
+key: "keys/backup.key"
 s3:
   url: "https://127.0.0.1"
   port: 9000
