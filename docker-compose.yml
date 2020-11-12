@@ -51,7 +51,7 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./data:/usr/share/elasticsearch/data
+      - data:/usr/share/elasticsearch/data
     ports:
       - 9200:9200
   elastic2:
@@ -76,6 +76,9 @@ services:
         soft: -1
         hard: -1
     volumes:
-      - ./datasecond:/usr/share/elasticsearch/data
+      - datasecond:/usr/share/elasticsearch/data
     ports:
       - 9201:9201
+volumes:
+  data:
+  datasecond:
