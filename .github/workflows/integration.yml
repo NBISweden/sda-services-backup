@@ -1,0 +1,59 @@
+name: Integration test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.6'
+
+    - name: Check out
+      uses: actions/checkout@v1
+
+    - name: Set up Go
+      uses: actions/setup-go@v1
+      with:
+        go-version: '1.15.4'
+
+    - name: install s3cmd
+      run: pip3 install s3cmd
+
+    - name: create data folders
+      run: mkdir data datasecond && sudo chmod 777 -R data && sudo chmod 777 -R datasecond
+
+    - name: Start virtual infrastructure
+      run: docker-compose -f ./docker-compose.yml up -d --force-recreate --build
+
+    - name: Wait for containers to start
+      run: sh ./scripts/readiness.sh
+
+    - name: Build packages
+      run: go build .
+
+    - name: Create test index
+      run: ./main --action create --index index123 --instance http://127.0.0.1:9200
+
+    - name: Dump test index to S3
+      run: ./main --action dump --index index123-test --instance http://127.0.0.1:9200
+
+    - name: List s3 repo
+      run: s3cmd ls -c s3conf s3://dumps
+
+    - name: Get dump file
+      run: s3cmd get -c s3conf s3://dumps/index123-test.bup
+
+    - name: Load test index from S3
+      run: ./main --action load --index index123-test --instance http://127.0.0.1:9201
+
+    - name: Compare documents
+      run: sh ./scripts/count_check.sh
