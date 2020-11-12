@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/rand"
 	"encoding/base64"
 	"fmt"
 	"io"
@@ -62,14 +63,21 @@ func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
 }
 
 func decryptDocs(rc io.ReadCloser, key []byte) string {
+	iv := make([]byte, aes.BlockSize)
+	_, err := io.ReadFull(rc, iv)
+
+	if err != nil {
+		log.Fatalf("Reading iv from stream failed: %v", err)
+	}
+
+	stream := getStreamDecryptor(iv, key)
+
 	buf := new(bytes.Buffer)
-	_, err := buf.ReadFrom(rc)
+	_, err = buf.ReadFrom(rc)
 	data := buf.Bytes()
 	if err != nil {
 		log.Error(err)
 	}
-
-	stream := getStreamDecryptor(key)
 
 	// XORKeyStream can work in-place if the two arguments are the same.
 	stream.XORKeyStream(data, data)
@@ -78,26 +86,30 @@ func decryptDocs(rc io.ReadCloser, key []byte) string {
 	return out
 }
 
-func getStreamEncryptor(key []byte) cipher.Stream {
+func getStreamEncryptor(key []byte) ([]byte, cipher.Stream) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var iv [aes.BlockSize]byte
+	iv := make([]byte, aes.BlockSize)
+
+	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
+		log.Fatal(err)
+	}
+
 	if err != nil {
 		log.Fatal(err)
 	}
 	stream := cipher.NewCFBEncrypter(block, iv[:])
 
-	return stream
+	return iv, stream
 }
 
-func getStreamDecryptor(key []byte) cipher.Stream {
+func getStreamDecryptor(iv, key []byte) cipher.Stream {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		log.Fatal(err)
 	}
-	var iv [aes.BlockSize]byte
 	stream := cipher.NewCFBDecrypter(block, iv[:])
 	return stream
 }

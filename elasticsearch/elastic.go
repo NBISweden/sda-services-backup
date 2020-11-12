@@ -59,7 +59,13 @@ func getDocuments(sb s3Backend, es elastic.Client, vc vault.Client, indexName, k
 
 	wr, err := sb.NewFileWriter(indexName + ".bup")
 	key := getKey(&vc, mountpath, keyName)
-	stream := getStreamEncryptor([]byte(key))
+	iv, stream := getStreamEncryptor([]byte(key))
+
+	l, err := wr.Write(iv)
+
+	if l != len(iv) || err != nil {
+		log.Fatalf("Could not write all of iv (%d vs %d) or write failed (%v)", l, len(iv), err)
+	}
 
 	log.Infoln("Scrolling through the documents...")
 
