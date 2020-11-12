@@ -39,7 +39,7 @@ services:
       - cluster.name=es-docker-cluster
       - cluster.initial_master_nodes=es01
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
       - path.repo=/usr/share/elasticsearch/backups
     ulimits:
       memlock:
@@ -54,11 +54,13 @@ services:
     container_name: elastic2
     environment:
       - node.name=es02
-      - cluster.name=es-docker-cluster
+      - cluster.name=es-docker-cluster-2
       - cluster.initial_master_nodes=es02
       - bootstrap.memory_lock=true
-      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
       - path.repo=/usr/share/elasticsearch/backups
+      - transport.tcp.port=9200
+      - transport.publish_port=9201
     ulimits:
       memlock:
         soft: -1
@@ -66,4 +68,4 @@ services:
     volumes:
       - ./datasecond:/usr/share/elasticsearch/data
     ports:
-      - 9201:9200
+      - 9201:9201
