@@ -24,12 +24,12 @@ func main() {
 
 	retryBackoff := backoff.NewExponentialBackOff()
 
-	ecfg := ElasticConfig{User: conf.Elastic.User, Password: conf.Elastic.Password}
-
 	c, err := elastic.NewClient(elasticsearch.Config{
 		Addresses: []string{
 			flags.instance,
 		},
+		Username:      conf.Elastic.User,
+		Password:      conf.Elastic.Password,
 		RetryOnStatus: []int{502, 503, 504, 429},
 		RetryBackoff: func(i int) time.Duration {
 			if i == 1 {
