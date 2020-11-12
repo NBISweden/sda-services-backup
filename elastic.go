@@ -19,7 +19,6 @@ import (
 type ElasticConfig struct {
 	User     string
 	Password string
-	Index    string
 }
 
 func readResponse(r io.Reader) string {
