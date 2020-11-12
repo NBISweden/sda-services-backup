@@ -7,7 +7,7 @@ services:
       - MINIO_ACCESS_KEY=myaccesskey
       - MINIO_SECRET_KEY=mysecretkey
     healthcheck:
-      test: ["CMD", "curl", "-fkq", "https://localhost:9000/minio/health/live"]
+      test: ["CMD", "curl", "-fkq", "https://127.0.0.1:9000/minio/health/live"]
       interval: 5s
       timeout: 20s
       retries: 3

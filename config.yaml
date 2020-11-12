@@ -1,5 +1,5 @@
 s3:
-  url: "https://localhost"
+  url: "https://127.0.0.1"
   port: 9000
   accesskey: "myaccesskey"
   secretkey: "mysecretkey"
