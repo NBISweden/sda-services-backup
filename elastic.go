@@ -148,6 +148,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 	if err != nil {
 		log.Fatalf("Unexpected error: %s", err)
 	}
+	defer bi.Close(context.Background())
 
 	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
@@ -181,6 +182,5 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 		}
 	}
 	fr.Close()
-	time.Sleep(time.Second * 8)
 	return err
 }
