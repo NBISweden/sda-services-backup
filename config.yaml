@@ -10,8 +10,3 @@ s3:
 elastic:
   user: "elastic"
   password: "elastic"
-vault:
-  addr: "http://localhost:8282"
-  token: "s.7rQlPx4SI1Ke82wZBEPXeDLu"
-  transitpath: "transit"
-  key: "transit"

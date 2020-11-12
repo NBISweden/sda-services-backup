@@ -18,19 +18,6 @@ services:
       - ./certs/ca.pem:/root/.minio/certs/CAs/public.crt
       - ./certs/s3.pem:/root/.minio/certs/public.crt
       - ./certs/s3-key.pem:/root/.minio/certs/private.key
-  consul:
-    image: consul:1.6.6
-    ports:
-      - "8500:8500"
-      - "8501:8501"
-  vault:
-    image: vault:1.5.3
-    command: server
-    ports:
-      - "8282:8282"
-    volumes:
-      - "./vault-config.hcl:/vault/config/vault-config.hcl"
-      - "./audit:/vault/audit"
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
     container_name: elastic
