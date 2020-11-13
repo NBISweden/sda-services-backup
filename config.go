@@ -10,11 +10,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+// ClFlags is an struc that holds cl flags info
+type ClFlags struct {
+	indexName string
+	action    string
+	instance  string
+}
+
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	Elastic ElasticConfig
-	Vault   VaultConfig
 	S3      S3Config
+	keyPath string
 }
 
 // NewConfig initializes and parses the config file and/or environment using
@@ -29,9 +36,11 @@ func NewConfig() *Config {
 }
 
 // getCLflags returns the CL args of indexName and action
-func getCLflags() (string, string) {
+func getCLflags() ClFlags {
+
 	flag.String("action", "create", "action can be create, dump or load")
 	flag.String("index", "index123", "index name to create, dump or load")
+	flag.String("instance", "http://127.0.0.1:9200", "elasticsearch instance to perform the action")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -39,7 +48,9 @@ func getCLflags() (string, string) {
 
 	indexName := viper.GetString("index")
 	action := viper.GetString("action")
-	return indexName, action
+	instance := viper.GetString("instance")
+
+	return ClFlags{indexName: indexName, action: action, instance: instance}
 
 }
 
@@ -72,21 +83,9 @@ func configS3Storage() S3Config {
 	return s3
 }
 
-// configVault populates a VaultConfig
-func configVault() VaultConfig {
-	vault := VaultConfig{}
-	vault.Addr = viper.GetString("vault.addr")
-	vault.Token = viper.GetString("vault.token")
-	vault.TransitMountPath = viper.GetString("vault.transitpath")
-	vault.Key = viper.GetString("vault.key")
-
-	return vault
-}
-
 // configElastic populates a ElasticConfig
 func configElastic() ElasticConfig {
 	elastic := ElasticConfig{}
-	elastic.Addr = viper.GetString("elastic.addr")
 	elastic.User = viper.GetString("elastic.user")
 	elastic.Password = viper.GetString("elastic.password")
 
@@ -99,7 +98,7 @@ func (c *Config) readConfig() {
 
 	c.Elastic = configElastic()
 
-	c.Vault = configVault()
+	c.keyPath = viper.GetString("key")
 
 	if viper.IsSet("log.level") {
 		stringLevel := viper.GetString("log.level")
