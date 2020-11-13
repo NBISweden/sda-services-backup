@@ -15,6 +15,7 @@ type ClFlags struct {
 	indexName string
 	action    string
 	instance  string
+	batches   int
 }
 
 // Config is a parent object for all the different configuration parts
@@ -39,6 +40,7 @@ func NewConfig() *Config {
 func getCLflags() ClFlags {
 
 	flag.String("action", "create", "action can be create, dump or load")
+	flag.Int("batches", 50, "number of batches to process the documents")
 	flag.String("index", "index123", "index name to create, dump or load")
 	flag.String("instance", "http://127.0.0.1:9200", "elasticsearch instance to perform the action")
 
@@ -46,11 +48,12 @@ func getCLflags() ClFlags {
 	pflag.Parse()
 	viper.BindPFlags(pflag.CommandLine)
 
-	indexName := viper.GetString("index")
 	action := viper.GetString("action")
+	batches := viper.GetInt("batches")
+	indexName := viper.GetString("index")
 	instance := viper.GetString("instance")
 
-	return ClFlags{indexName: indexName, action: action, instance: instance}
+	return ClFlags{indexName: indexName, action: action, instance: instance, batches: batches}
 
 }
 
