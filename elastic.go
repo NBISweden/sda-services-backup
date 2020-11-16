@@ -57,7 +57,6 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 
 	wg := sync.WaitGroup{}
 
-	wg.Add(1)
 	wr, err := sb.NewFileWriter(indexName+".bup", &wg)
 	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))

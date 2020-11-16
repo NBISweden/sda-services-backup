@@ -111,6 +111,7 @@ func (sb *s3Backend) NewFileWriter(filePath string, wg *sync.WaitGroup) (io.Writ
 	}
 
 	reader, writer := io.Pipe()
+	wg.Add(1)
 	go func() {
 		defer wg.Done()
 		_, err := sb.Uploader.Upload(&s3manager.UploadInput{
