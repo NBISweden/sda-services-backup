@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,10 +55,12 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 		scrollID string
 	)
 
-	wr, err := sb.NewFileWriter(indexName + ".bup")
+	wg := sync.WaitGroup{}
+
+	wg.Add(1)
+	wr, err := sb.NewFileWriter(indexName+".bup", &wg)
 	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))
-
 	l, err := wr.Write(iv)
 
 	if l != len(iv) || err != nil {
@@ -82,7 +85,6 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 	json := readResponse(res.Body)
 
 	hits := gjson.Get(json, "hits.hits")
-
 	encryptDocs(hits, stream, wr)
 
 	log.Info("Batch   ", batchNum)
@@ -123,7 +125,7 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 		}
 	}
 	wr.Close()
-	time.Sleep(time.Second * 8)
+	wg.Wait()
 	return err
 }
 

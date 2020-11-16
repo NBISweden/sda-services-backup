@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
@@ -104,14 +105,14 @@ func (sb *s3Backend) NewFileReader(filePath string) (io.ReadCloser, error) {
 }
 
 // NewFileWriter uploads the contents of an io.Reader to a S3 bucket
-func (sb *s3Backend) NewFileWriter(filePath string) (io.WriteCloser, error) {
+func (sb *s3Backend) NewFileWriter(filePath string, wg *sync.WaitGroup) (io.WriteCloser, error) {
 	if sb == nil {
 		return nil, fmt.Errorf("Invalid s3Backend")
 	}
 
 	reader, writer := io.Pipe()
 	go func() {
-
+		defer wg.Done()
 		_, err := sb.Uploader.Upload(&s3manager.UploadInput{
 			Body:            reader,
 			Bucket:          aws.String(sb.Bucket),
