@@ -1,0 +1,7 @@
+.github/
+data/
+datasecond/
+docker-compose.yml
+READNE.md
+main
+config.yaml
