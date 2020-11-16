@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -54,10 +55,11 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 		scrollID string
 	)
 
-	wr, err := sb.NewFileWriter(indexName + ".bup")
+	wg := sync.WaitGroup{}
+
+	wr, err := sb.NewFileWriter(indexName+".bup", &wg)
 	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))
-
 	l, err := wr.Write(iv)
 
 	if l != len(iv) || err != nil {
@@ -82,7 +84,6 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 	json := readResponse(res.Body)
 
 	hits := gjson.Get(json, "hits.hits")
-
 	encryptDocs(hits, stream, wr)
 
 	log.Info("Batch   ", batchNum)
@@ -123,7 +124,7 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 		}
 	}
 	wr.Close()
-	time.Sleep(time.Second * 8)
+	wg.Wait()
 	return err
 }
 
@@ -131,6 +132,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
+	defer fr.Close()
 	if err != nil {
 		log.Error(err)
 	}
@@ -180,6 +182,6 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 			}
 		}
 	}
-	fr.Close()
+
 	return err
 }
