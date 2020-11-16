@@ -133,6 +133,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
+	defer fr.Close()
 	if err != nil {
 		log.Error(err)
 	}
@@ -182,6 +183,6 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 			}
 		}
 	}
-	fr.Close()
+
 	return err
 }
