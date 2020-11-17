@@ -10,3 +10,6 @@ s3:
 elastic:
   user: "elastic"
   password: "elastic"
+  cacert: ""
+  clientcert: ""
+  clientkey: ""
