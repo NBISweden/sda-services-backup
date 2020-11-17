@@ -57,20 +57,20 @@ func transportConfigES(config ElasticConfig) http.RoundTripper {
 	}
 
 	if config.verifyPeer {
-		if config.clientCert != "" && config.clientKey != "" {
-			cert, e := ioutil.ReadFile(config.clientCert)
-			if e != nil {
-				log.Fatalf("failed to append client cert %q: %v", config.clientCert, e)
-			}
-			key, e := ioutil.ReadFile(config.clientKey)
-			if e != nil {
-				log.Fatalf("failed to append key %q: %v", config.clientKey, e)
-			}
-			if certs, e := tls.X509KeyPair(cert, key); e == nil {
-				cfg.Certificates = append(cfg.Certificates, certs)
-			}
-		} else {
+		if config.clientCert == "" || config.clientKey == "" {
 			log.Fatalf("No client cert or key were provided")
+		}
+
+		cert, e := ioutil.ReadFile(config.clientCert)
+		if e != nil {
+			log.Fatalf("failed to append client cert %q: %v", config.clientCert, e)
+		}
+		key, e := ioutil.ReadFile(config.clientKey)
+		if e != nil {
+			log.Fatalf("failed to append key %q: %v", config.clientKey, e)
+		}
+		if certs, e := tls.X509KeyPair(cert, key); e == nil {
+			cfg.Certificates = append(cfg.Certificates, certs)
 		}
 	}
 
