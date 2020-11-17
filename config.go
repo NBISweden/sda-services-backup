@@ -46,7 +46,10 @@ func getCLflags() ClFlags {
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-	viper.BindPFlags(pflag.CommandLine)
+    err := viper.BindPFlags(pflag.CommandLine)
+    if err != nil {
+        log.Fatalf("Could not bind process flags for commandline: %v", err)
+    }
 
 	action := viper.GetString("action")
 	batches := viper.GetInt("batches")

@@ -49,7 +49,10 @@ func main() {
 		log.Infof("Loading index %s into %s", flags.indexName, flags.instance)
 		loadData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
 	case "dump":
-		countDocuments(*c, flags.indexName)
+		err = countDocuments(*c, flags.indexName)
+        if err != nil {
+            log.Fatal(err)
+        }
 		log.Infof("Dumping index %s into %s", flags.indexName, flags.instance)
 		dumpData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
 	case "create":
