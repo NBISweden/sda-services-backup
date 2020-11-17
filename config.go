@@ -46,10 +46,10 @@ func getCLflags() ClFlags {
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
-    err := viper.BindPFlags(pflag.CommandLine)
-    if err != nil {
-        log.Fatalf("Could not bind process flags for commandline: %v", err)
-    }
+	err := viper.BindPFlags(pflag.CommandLine)
+	if err != nil {
+		log.Fatalf("Could not bind process flags for commandline: %v", err)
+	}
 
 	action := viper.GetString("action")
 	batches := viper.GetInt("batches")
@@ -92,8 +92,12 @@ func configS3Storage() S3Config {
 // configElastic populates a ElasticConfig
 func configElastic() ElasticConfig {
 	elastic := ElasticConfig{}
-	elastic.User = viper.GetString("elastic.user")
-	elastic.Password = viper.GetString("elastic.password")
+	elastic.user = viper.GetString("elastic.user")
+	elastic.password = viper.GetString("elastic.password")
+	elastic.verifyPeer = viper.GetBool("elastic.verifypeer")
+	elastic.caCert = viper.GetString("elastic.cacert")
+	elastic.clientCert = viper.GetString("elastic.clientcert")
+	elastic.clientKey = viper.GetString("elastic.clientkey")
 
 	return elastic
 }
