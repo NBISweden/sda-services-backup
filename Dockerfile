@@ -14,4 +14,3 @@ COPY --from=0 /go/build/svc svc
 COPY --from=0 /go/passwd /etc/passwd
 USER 65534
 EXPOSE 8080
-ENTRYPOINT [ "/svc" ]
