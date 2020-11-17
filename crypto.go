@@ -15,14 +15,6 @@ import (
 	"github.com/tidwall/gjson"
 )
 
-// VaultConfig holds Vault settings
-type VaultConfig struct {
-	Addr             string
-	Token            string
-	TransitMountPath string
-	Key              string
-}
-
 func getKey(key string) []byte {
 	data, err := ioutil.ReadFile(key)
 	if err != nil {
@@ -47,7 +39,7 @@ func encryptDocs(hits gjson.Result, stream cipher.Stream, fr io.Writer) {
 
 }
 
-func decryptDocs(rc io.ReadCloser, key []byte) string {
+func decryptDocs(rc io.Reader, key []byte) string {
 	iv := make([]byte, aes.BlockSize)
 	_, err := io.ReadFull(rc, iv)
 

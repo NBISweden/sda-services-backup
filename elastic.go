@@ -24,7 +24,10 @@ type ElasticConfig struct {
 
 func readResponse(r io.Reader) string {
 	var b bytes.Buffer
-	b.ReadFrom(r)
+    _, err := b.ReadFrom(r)
+    if err != nil { // Maybe propagate this error upwards?
+        log.Fatal(err)
+    }
 	return b.String()
 }
 
@@ -58,6 +61,10 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 	wg := sync.WaitGroup{}
 
 	wr, err := sb.NewFileWriter(indexName+".bup", &wg)
+    if err != nil {
+        log.Fatalf("Could not open backup file for writing: %v", err)
+    }
+
 	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))
 	l, err := wr.Write(iv)
@@ -68,7 +75,11 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 
 	log.Infoln("Scrolling through the documents...")
 
-	es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
+	_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
+
+    if err != nil {
+        log.Fatalf("Could not refresh indexes: %v", err)
+    }
 
 	res, err := es.Search(
 		es.Search.WithIndex(indexName),
@@ -132,10 +143,11 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
-	defer fr.Close()
 	if err != nil {
 		log.Error(err)
 	}
+	defer fr.Close()
+
 	key := getKey(keyPath)
 	ud := decryptDocs(fr, []byte(key))
 
