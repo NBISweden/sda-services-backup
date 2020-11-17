@@ -3,8 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -18,8 +23,62 @@ import (
 
 // ElasticConfig is a Struct that holds ElasticSearch config
 type ElasticConfig struct {
-	User     string
-	Password string
+	user       string
+	password   string
+	verifyPeer bool
+	caCert     string
+	clientCert string
+	clientKey  string
+}
+
+// transportConfigES is a helper method to setup TLS for the ES client.
+func transportConfigES(config ElasticConfig) http.RoundTripper {
+	cfg := new(tls.Config)
+
+	// Enforce TLS1.2 or higher
+	cfg.MinVersion = 2
+
+	// Read system CAs
+	var systemCAs, _ = x509.SystemCertPool()
+	if reflect.DeepEqual(systemCAs, x509.NewCertPool()) {
+		log.Debug("creating new CApool")
+		systemCAs = x509.NewCertPool()
+	}
+	cfg.RootCAs = systemCAs
+
+	if config.caCert != "" {
+		cacert, e := ioutil.ReadFile(config.caCert)
+		if e != nil {
+			log.Fatalf("failed to append %q to RootCAs: %v", cacert, e)
+		}
+		if ok := cfg.RootCAs.AppendCertsFromPEM(cacert); !ok {
+			log.Debug("no certs appended, using system certs only")
+		}
+	}
+
+	if config.verifyPeer {
+		if config.clientCert != "" && config.clientKey != "" {
+			cert, e := ioutil.ReadFile(config.clientCert)
+			if e != nil {
+				log.Fatalf("failed to append client cert %q: %v", config.clientCert, e)
+			}
+			key, e := ioutil.ReadFile(config.clientKey)
+			if e != nil {
+				log.Fatalf("failed to append key %q: %v", config.clientKey, e)
+			}
+			if certs, e := tls.X509KeyPair(cert, key); e == nil {
+				cfg.Certificates = append(cfg.Certificates, certs)
+			}
+		} else {
+			log.Fatalf("No client cert or key were provided")
+		}
+	}
+
+	var trConfig http.RoundTripper = &http.Transport{
+		TLSClientConfig:   cfg,
+		ForceAttemptHTTP2: true}
+
+	return trConfig
 }
 
 func readResponse(r io.Reader) string {
