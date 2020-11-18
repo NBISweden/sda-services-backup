@@ -1,16 +1,13 @@
 FROM golang:1.15.5-alpine3.12
-RUN apk add --no-cache git
+RUN apk add --no-cache git coreutils && rm -rf /var/cache/apk/*
 COPY . .
 ENV GO111MODULE=on
 ENV GOPATH=$PWD
+ENV XDG_CACHE_HOME=/tmp/.cache
 ENV CGO_ENABLED=0
 ENV GOOS=linux
-RUN go build -ldflags "-extldflags -static" -o ./build/svc .
+RUN go build -ldflags "-extldflags -static" -o svc .
 RUN echo "nobody:x:65534:65534:nobody:/:/sbin/nologin" > passwd
 
-FROM scratch
-COPY --from=0 /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-COPY --from=0 /go/build/svc svc
-COPY --from=0 /go/passwd /etc/passwd
 USER 65534
 EXPOSE 8080
