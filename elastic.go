@@ -83,10 +83,10 @@ func transportConfigES(config ElasticConfig) http.RoundTripper {
 
 func readResponse(r io.Reader) string {
 	var b bytes.Buffer
-    _, err := b.ReadFrom(r)
-    if err != nil { // Maybe propagate this error upwards?
-        log.Fatal(err)
-    }
+	_, err := b.ReadFrom(r)
+	if err != nil { // Maybe propagate this error upwards?
+		log.Fatal(err)
+	}
 	return b.String()
 }
 
@@ -110,7 +110,7 @@ func countDocuments(es elastic.Client, indexName string) error {
 	return err
 }
 
-func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, batches int) error {
+func getDocuments(sb s3Backend, es elastic.Client, keyPath, index string, batches int) error {
 
 	var (
 		batchNum int
@@ -119,10 +119,12 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 
 	wg := sync.WaitGroup{}
 
+	indexName := strings.Replace(index, "*", "", -1)
+
 	wr, err := sb.NewFileWriter(indexName+".bup", &wg)
-    if err != nil {
-        log.Fatalf("Could not open backup file for writing: %v", err)
-    }
+	if err != nil {
+		log.Fatalf("Could not open backup file for writing: %v", err)
+	}
 
 	key := getKey(keyPath)
 	iv, stream := getStreamEncryptor([]byte(key))
@@ -136,9 +138,9 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexName string, ba
 
 	_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex(indexName))
 
-    if err != nil {
-        log.Fatalf("Could not refresh indexes: %v", err)
-    }
+	if err != nil {
+		log.Fatalf("Could not refresh indexes: %v", err)
+	}
 
 	res, err := es.Search(
 		es.Search.WithIndex(indexName),
