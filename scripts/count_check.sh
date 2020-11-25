@@ -1,7 +1,7 @@
 #!/bin/bash
 
-COUNT_1=$(curl http://127.0.0.1:9200/index123-test/_count | jq .count)
-COUNT_2=$(curl http://127.0.0.1:9201/index123-test/_count | jq .count)
+COUNT_1=$(curl http://127.0.0.1:9200/$1-test/_count | jq .count)
+COUNT_2=$(curl http://127.0.0.1:9201/$1-test/_count | jq .count)
 
 echo "${COUNT_1}"
 echo "${COUNT_2}"
