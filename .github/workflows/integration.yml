@@ -64,5 +64,8 @@ jobs:
     - name: Load second test index from S3
       run: ./main --action load --index indexabc-test --instance http://127.0.0.1:9201 && sleep 2
 
-    - name: Compare documents
-      run: sh ./scripts/count_check.sh
+    - name: Compare documents of the first index
+      run: sh ./scripts/count_check.sh index123
+      
+    - name: Compare documents of the second index
+      run: sh ./scripts/count_check.sh indexabc
