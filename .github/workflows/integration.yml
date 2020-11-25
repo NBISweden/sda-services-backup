@@ -47,7 +47,7 @@ jobs:
       run: ./main --action create --index indexabc --instance http://127.0.0.1:9200
 
     - name: Dump test index to S3
-      run: ./main --action dump --index *index --instance http://127.0.0.1:9200
+      run: ./main --action dump --index *index* --instance http://127.0.0.1:9200
 
     - name: List s3 repo
       run: s3cmd ls -c s3conf s3://dumps
