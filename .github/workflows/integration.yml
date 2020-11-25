@@ -42,18 +42,27 @@ jobs:
 
     - name: Create test index
       run: ./main --action create --index index123 --instance http://127.0.0.1:9200
+    
+    - name: Create second test index
+      run: ./main --action create --index indexabc --instance http://127.0.0.1:9200
 
     - name: Dump test index to S3
-      run: ./main --action dump --index index123-test --instance http://127.0.0.1:9200
+      run: ./main --action dump --index *index --instance http://127.0.0.1:9200
 
     - name: List s3 repo
       run: s3cmd ls -c s3conf s3://dumps
 
     - name: Get dump file
       run: s3cmd get -c s3conf s3://dumps/index123-test.bup
+      
+    - name: Get second dump file
+      run: s3cmd get -c s3conf s3://dumps/indexabc-test.bup
 
     - name: Load test index from S3
       run: ./main --action load --index index123-test --instance http://127.0.0.1:9201 && sleep 2
+    
+    - name: Load second test index from S3
+      run: ./main --action load --index indexabc-test --instance http://127.0.0.1:9201 && sleep 2
 
     - name: Compare documents
       run: sh ./scripts/count_check.sh
