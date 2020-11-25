@@ -186,6 +186,7 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, ba
 		}
 
 		json := readResponse(res.Body)
+		res.Body.Close()
 
 		log.Info(json)
 
