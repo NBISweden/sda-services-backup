@@ -48,16 +48,16 @@ func main() {
 	}
 
 	switch flags.action {
-	case "load":
+	case "backup":
 		log.Infof("Loading index %s into %s", flags.indexName, flags.instance)
-		loadData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
-	case "dump":
+		backupData(*sb, *c, conf.keyPath, flags.indexName, flags.batchsize)
+	case "restore":
 		err = countDocuments(*c, flags.indexName)
 		if err != nil {
 			log.Fatal(err)
 		}
 		log.Infof("Dumping index %s into %s", flags.indexName, flags.instance)
-		dumpData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
+		restoreData(*sb, *c, conf.keyPath, flags.indexName, flags.batchsize)
 	case "create":
 		indexName := flags.indexName + "-" + "test"
 		log.Infof("Creating index %s in %s", indexName, flags.instance)
@@ -65,16 +65,17 @@ func main() {
 	}
 }
 
-func loadData(sb s3Backend, ec elastic.Client, keyPath, indexName string, batches int) {
-	err := bulkDocuments(sb, ec, keyPath, indexName, batches)
+func restoreData(sb s3Backend, ec elastic.Client, keyPath, indexName string, batchsize int) {
+	err := restoreDocuments(sb, ec, keyPath, indexName, batchsize)
 	if err != nil {
 		log.Error(err)
 	}
 	log.Info("Done loading data from S3")
 
 }
-func dumpData(sb s3Backend, ec elastic.Client, keyPath, indexName string, batches int) {
-	err := getDocuments(sb, ec, keyPath, indexName, batches)
+
+func backupData(sb s3Backend, ec elastic.Client, keyPath, indexName string, batchsize int) {
+	err := backupDocuments(sb, ec, keyPath, indexName, batchsize)
 	if err != nil {
 		log.Error(err)
 	}
