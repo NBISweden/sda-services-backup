@@ -53,9 +53,9 @@ func main() {
 		loadData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
 	case "dump":
 		err = countDocuments(*c, flags.indexName)
-        if err != nil {
-            log.Fatal(err)
-        }
+		if err != nil {
+			log.Fatal(err)
+		}
 		log.Infof("Dumping index %s into %s", flags.indexName, flags.instance)
 		dumpData(*sb, *c, conf.keyPath, flags.indexName, flags.batches)
 	case "create":
