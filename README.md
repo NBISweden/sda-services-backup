@@ -8,16 +8,16 @@
 ./main --action create --index index123
 ```
 
-## Dumping encrypted index to S3
+## Backing up encrypted index to S3
 ```sh
-./main --action dump --index index123-test
+./main --action backup --index index123-test
 s3cmd ls -c s3conf s3://dumps
 s3cmd get -c s3conf s3://dumps/index123-test.bup
 ```
 
-## Loading index from S3 to ES
+## Restoring index from S3 to ES
 ```sh
-./main --action load --index index123-test --instance http://127.0.0.1:9201
+./main --action restore --index index123-test --instance http://127.0.0.1:9201
 ```
 
 ## Example script configuration

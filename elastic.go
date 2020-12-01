@@ -137,7 +137,7 @@ func findIndices(es elastic.Client, indexGlob string) ([]string, error) {
 	return indices, err
 }
 
-func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, batches int) error {
+func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, batchsize int) error {
 
 	var (
 		batchNum int
@@ -176,7 +176,7 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, ba
 
 		res, err := es.Search(
 			es.Search.WithIndex(index),
-			es.Search.WithSize(batches),
+			es.Search.WithSize(batchsize),
 			es.Search.WithSort("_doc"),
 			es.Search.WithScroll(time.Second*60),
 		)
@@ -237,7 +237,7 @@ func getDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, ba
 	return err
 }
 
-func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, batches int) error {
+func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, batchsize int) error {
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
@@ -266,7 +266,7 @@ func bulkDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, ba
 			log.Info("End of blob reached")
 			break
 		}
-		for i := 0; i < batches; i++ {
+		for i := 0; i < batchsize; i++ {
 			key := fmt.Sprintf("%v._source", i)
 			source := gjson.Get(docs, key).String()
 
