@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/zlib"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -135,6 +136,27 @@ func findIndices(es elastic.Client, indexGlob string) ([]string, error) {
 	log.Debugf("Found indices: %v", indices)
 
 	return indices, err
+
+}
+
+func newCompressor(key []byte, w io.Writer) (io.WriteCloser, error) {
+
+	zw := zlib.NewWriter(w)
+	_, err := zlib.NewWriterLevel(zw, zlib.BestCompression)
+
+	if err != nil {
+		log.Error("Unable to set zlib writer level", err)
+	}
+	return zw, nil
+}
+
+func newDecompressor(key []byte, r io.Reader) (io.ReadCloser, error) {
+
+	zr, err := zlib.NewReader(r)
+	if err != nil {
+		log.Error("Unable to create zlib reader", err)
+	}
+	return zr, err
 }
 
 func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, batchsize int) error {
@@ -166,6 +188,12 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 			log.Fatalf("Could not initialize encryptor: (%v)", err)
 		}
 
+		c, err := newCompressor(key, e)
+
+		if err != nil {
+			log.Fatalf("Could not initialize encryptor: (%v)", err)
+		}
+
 		_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex(index))
 
 		if err != nil {
@@ -189,7 +217,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 		log.Info(json)
 
 		hits := gjson.Get(json, "hits.hits")
-		_, err = e.Write([]byte(hits.Raw + "\n"))
+		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
 			log.Fatalf("Could not encrypt/write: %s", err)
 		}
@@ -224,7 +252,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 				log.Infoln("Finished scrolling")
 				break
 			} else {
-				_, err = e.Write([]byte(hits.Raw + "\n"))
+				_, err = c.Write([]byte(hits.Raw + "\n"))
 				if err != nil {
 					log.Fatalf("Could not encrypt/write: %s", err)
 				}
@@ -234,6 +262,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 				log.Debug(strings.Repeat("-", 80))
 			}
 		}
+		c.Close()
 		wr.Close()
 		wg.Wait()
 	}
@@ -253,9 +282,14 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string,
 	key := getKey(keyPath)
 	r, err := NewDecryptor(key, fr)
 	if err != nil {
-		log.Error(err)
+		log.Error("Could not initialise decryptor", err)
 	}
-	data, err := ioutil.ReadAll(r)
+	d, err := newDecompressor(key, r)
+	if err != nil {
+		log.Error("Could not initialise decompressor", err)
+
+	}
+	data, err := ioutil.ReadAll(d)
 	if err != nil {
 		log.Error(err)
 	}
