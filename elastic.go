@@ -291,6 +291,11 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string)
 	}
 	data, err := ioutil.ReadAll(d)
 	if err != nil {
+		log.Error("Could not read all data: ", err)
+	}
+	d.Close()
+
+	if err != nil {
 		log.Error(err)
 	}
 	ud := string(data)
