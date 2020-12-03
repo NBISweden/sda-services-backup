@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"compress/zlib"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -135,6 +136,27 @@ func findIndices(es elastic.Client, indexGlob string) ([]string, error) {
 	log.Debugf("Found indices: %v", indices)
 
 	return indices, err
+
+}
+
+func newCompressor(key []byte, w io.Writer) (io.WriteCloser, error) {
+
+	zw := zlib.NewWriter(w)
+	_, err := zlib.NewWriterLevel(zw, zlib.BestCompression)
+
+	if err != nil {
+		log.Error("Unable to set zlib writer level", err)
+	}
+	return zw, nil
+}
+
+func newDecompressor(key []byte, r io.Reader) (io.ReadCloser, error) {
+
+	zr, err := zlib.NewReader(r)
+	if err != nil {
+		log.Error("Unable to create zlib reader", err)
+	}
+	return zr, err
 }
 
 func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, batchsize int) error {
@@ -159,14 +181,18 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 		}
 
 		key := getKey(keyPath)
-		iv, stream := getStreamEncryptor([]byte(key))
-		l, err := wr.Write(iv)
 
-		if l != len(iv) || err != nil {
-			log.Fatalf("Could not write all of iv (%d vs %d) or write failed (%v)", l, len(iv), err)
+		e, err := NewEncryptor(key, wr)
+
+		if err != nil {
+			log.Fatalf("Could not initialize encryptor: (%v)", err)
 		}
 
-		log.Infof("Scrolling through the documents of index %s ...", index)
+		c, err := newCompressor(key, e)
+
+		if err != nil {
+			log.Fatalf("Could not initialize encryptor: (%v)", err)
+		}
 
 		_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex(index))
 
@@ -191,7 +217,10 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 		log.Info(json)
 
 		hits := gjson.Get(json, "hits.hits")
-		encryptDocs(hits, stream, wr)
+		_, err = c.Write([]byte(hits.Raw + "\n"))
+		if err != nil {
+			log.Fatalf("Could not encrypt/write: %s", err)
+		}
 
 		log.Info("Batch   ", batchNum)
 		log.Debug("ScrollID", scrollID)
@@ -223,13 +252,17 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 				log.Infoln("Finished scrolling")
 				break
 			} else {
-				encryptDocs(hits, stream, wr)
+				_, err = c.Write([]byte(hits.Raw + "\n"))
+				if err != nil {
+					log.Fatalf("Could not encrypt/write: %s", err)
+				}
 				log.Info("Batch   ", batchNum)
 				log.Debug("ScrollID", scrollID)
 				log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
 				log.Debug(strings.Repeat("-", 80))
 			}
 		}
+		c.Close()
 		wr.Close()
 		wg.Wait()
 	}
@@ -247,7 +280,20 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string,
 	defer fr.Close()
 
 	key := getKey(keyPath)
-	ud := decryptDocs(fr, []byte(key))
+	r, err := NewDecryptor(key, fr)
+	if err != nil {
+		log.Error("Could not initialise decryptor", err)
+	}
+	d, err := newDecompressor(key, r)
+	if err != nil {
+		log.Error("Could not initialise decompressor", err)
+
+	}
+	data, err := ioutil.ReadAll(d)
+	if err != nil {
+		log.Error(err)
+	}
+	ud := string(data)
 
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         indexName,
