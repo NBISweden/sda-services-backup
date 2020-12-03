@@ -66,7 +66,7 @@ func main() {
 }
 
 func restoreData(sb s3Backend, ec elastic.Client, keyPath, indexName string, batchsize int) {
-	err := restoreDocuments(sb, ec, keyPath, indexName, batchsize)
+	err := restoreDocuments(sb, ec, keyPath, indexName)
 	if err != nil {
 		log.Error(err)
 	}

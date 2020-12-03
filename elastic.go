@@ -270,7 +270,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 	return err
 }
 
-func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string, batchsize int) error {
+func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string) error {
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
@@ -312,9 +312,14 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string,
 			log.Info("End of blob reached")
 			break
 		}
-		for i := 0; i < batchsize; i++ {
+		i := 0
+		for {
 			key := fmt.Sprintf("%v._source", i)
 			source := gjson.Get(docs, key).String()
+
+			if source == "" {
+				break
+			}
 
 			err = bi.Add(
 				context.Background(),
@@ -336,6 +341,7 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string,
 			if err != nil {
 				log.Fatalf("Unexpected error: %s", err)
 			}
+			i++
 		}
 	}
 
