@@ -214,8 +214,6 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 		json := readResponse(res.Body)
 		res.Body.Close()
 
-		log.Info(json)
-
 		hits := gjson.Get(json, "hits.hits")
 		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
