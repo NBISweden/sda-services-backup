@@ -14,3 +14,10 @@ elastic:
   cacert: ""
   clientcert: ""
   clientkey: ""
+db:
+  host: "localhost"
+  user: "postgres"
+  password: "postgres"
+  database: "test"
+log:
+  level: debug

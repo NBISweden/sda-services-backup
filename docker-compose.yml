@@ -66,6 +66,25 @@ services:
       - datasecond:/usr/share/elasticsearch/data
     ports:
       - 9201:9201
+  db:
+    container_name: db
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_DB=test
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-U", "postgres"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    image: postgres:11.2-alpine
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgData:/var/lib/postgresql/data
+      - ./certs:/certs
+      - ./sql_files:/docker-entrypoint-initdb.d
 volumes:
   data:
   datasecond:
+  pgData:
