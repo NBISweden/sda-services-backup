@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os/exec"
 	"sync"
 	"time"
@@ -65,4 +66,44 @@ func pgDump(sb s3Backend, db DBConf, keyPath string) {
 	c.Close()
 	wr.Close()
 	wg.Wait()
+}
+
+func pgRestore(sb s3Backend, db DBConf, keyPath, sqlDump string) {
+
+	fr, err := sb.NewFileReader(sqlDump)
+	if err != nil {
+		log.Error(err)
+	}
+	defer fr.Close()
+
+	key := getKey(keyPath)
+	r, err := NewDecryptor(key, fr)
+	if err != nil {
+		log.Error("Could not initialise decryptor", err)
+	}
+	d, err := newDecompressor(key, r)
+	if err != nil {
+		log.Error("Could not initialise decompressor", err)
+
+	}
+	data, err := ioutil.ReadAll(d)
+	if err != nil {
+		log.Error("Could not read all data: ", err)
+	}
+	d.Close()
+
+	dbURI := fmt.Sprintf("--dbname=postgresql://%s:%s@%s:%d/%s", db.user, db.password, db.host, db.port, db.database)
+	cmd := exec.Command("pg_restore", dbURI)
+
+	var in bytes.Buffer
+	cmd.Stdin = &in
+	in.Write(data)
+
+	var errMsg bytes.Buffer
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Fatalf(errMsg.String())
+	}
 }
