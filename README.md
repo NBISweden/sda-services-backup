@@ -22,7 +22,7 @@ s3cmd get -c s3conf s3://dumps/index123-test.bup
 ./main --action restore --index index123-test --instance http://127.0.0.1:9201
 ```
 
-## Backiung up a database
+## Backing up a database
 
 ```cmd
 ./main --action pg_dump
@@ -33,7 +33,7 @@ s3cmd get -c s3conf s3://dumps/index123-test.bup
 The target database must exist when restoring the data.
 
 ```cmd
-./main --action pg_dump --index <pg-dump-file> 
+./main --action pg_restore --index <pg-dump-file> 
 ```
 
 ## Example script configuration
