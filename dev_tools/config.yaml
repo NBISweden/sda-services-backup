@@ -1,4 +1,4 @@
-key: "keys/backup.key"
+key: "./dev_tools/keys/backup.key"
 s3:
   url: "https://127.0.0.1"
   port: 9000
@@ -6,7 +6,7 @@ s3:
   secretkey: "mysecretkey"
   bucket: "dumps"
   #chunksize: 32
-  cacert: "./certs/ca.pem"
+  cacert: "./dev_tools/certs/ca.pem"
 elastic:
   user: "elastic"
   password: "elastic"
