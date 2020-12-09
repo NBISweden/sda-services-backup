@@ -24,17 +24,17 @@ func getKey(path string) []byte {
 	return decodedkey
 }
 
-type Encryptor struct {
+type encryptor struct {
 	stream cipher.Stream
 	w      io.Writer
 }
 
-type Decryptor struct {
+type decryptor struct {
 	stream cipher.Stream
 	r      io.Reader
 }
 
-func NewDecryptor(key []byte, r io.Reader) (*Decryptor, error) {
+func newDecryptor(key []byte, r io.Reader) (*decryptor, error) {
 	iv := make([]byte, aes.BlockSize)
 	_, err := io.ReadFull(r, iv)
 
@@ -48,13 +48,13 @@ func NewDecryptor(key []byte, r io.Reader) (*Decryptor, error) {
 	}
 	stream := cipher.NewCFBDecrypter(block, iv[:])
 
-	return &Decryptor{
+	return &decryptor{
 		stream: stream,
 		r:      r,
 	}, nil
 }
 
-func (d *Decryptor) Read(p []byte) (n int, err error) {
+func (d *decryptor) Read(p []byte) (n int, err error) {
 	b := make([]byte, len(p))
 	n, err = d.r.Read(b)
 	if n == 0 {
@@ -64,7 +64,7 @@ func (d *Decryptor) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func NewEncryptor(key []byte, w io.Writer) (*Encryptor, error) {
+func newEncryptor(key []byte, w io.Writer) (*encryptor, error) {
 	block, err := aes.NewCipher(key)
 	if err != nil {
 		return nil, err
@@ -86,13 +86,13 @@ func NewEncryptor(key []byte, w io.Writer) (*Encryptor, error) {
 		return nil, fmt.Errorf("Ecnryptor, failed to write iv")
 	}
 
-	return &Encryptor{
+	return &encryptor{
 		stream: stream,
 		w:      w,
 	}, nil
 }
 
-func (e *Encryptor) Write(p []byte) (n int, err error) {
+func (e *encryptor) Write(p []byte) (n int, err error) {
 	b := make([]byte, len(p))
 	e.stream.XORKeyStream(b, p)
 	n, err = e.w.Write(b)

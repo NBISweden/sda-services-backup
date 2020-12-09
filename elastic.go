@@ -182,7 +182,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 
 		key := getKey(keyPath)
 
-		e, err := NewEncryptor(key, wr)
+		e, err := newEncryptor(key, wr)
 
 		if err != nil {
 			log.Fatalf("Could not initialize encryptor: (%v)", err)
@@ -278,7 +278,7 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string)
 	defer fr.Close()
 
 	key := getKey(keyPath)
-	r, err := NewDecryptor(key, fr)
+	r, err := newDecryptor(key, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor", err)
 	}

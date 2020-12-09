@@ -48,7 +48,7 @@ func pgDump(sb s3Backend, db DBConf, keyPath string) {
 	}
 
 	key := getKey(keyPath)
-	e, err := NewEncryptor(key, wr)
+	e, err := newEncryptor(key, wr)
 	if err != nil {
 		log.Fatalf("Could not initialize encryptor: (%v)", err)
 	}
@@ -77,7 +77,7 @@ func pgRestore(sb s3Backend, db DBConf, keyPath, sqlDump string) {
 	defer fr.Close()
 
 	key := getKey(keyPath)
-	r, err := NewDecryptor(key, fr)
+	r, err := newDecryptor(key, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor", err)
 	}
