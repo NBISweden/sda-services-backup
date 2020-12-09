@@ -155,10 +155,10 @@ func (c *Config) readConfig() {
 
 	c.elastic = configElastic()
 
-	c.keyPath = viper.GetString("key")
+	c.keyPath = viper.GetString("encryptionKey")
 
-	if viper.IsSet("log.level") {
-		stringLevel := viper.GetString("log.level")
+	if viper.IsSet("loglevel") {
+		stringLevel := viper.GetString("loglevel")
 		intLevel, err := log.ParseLevel(stringLevel)
 		if err != nil {
 			log.Printf("Log level '%s' not supported, setting to 'trace'", stringLevel)
@@ -175,13 +175,13 @@ func parseConfig() {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetConfigType("yaml")
-	if viper.IsSet("server.confPath") {
-		cp := viper.GetString("server.confPath")
+	if viper.IsSet("configPath") {
+		cp := viper.GetString("conifgPath")
 		ss := strings.Split(strings.TrimLeft(cp, "/"), "/")
 		viper.AddConfigPath(path.Join(ss...))
 	}
-	if viper.IsSet("server.confFile") {
-		viper.SetConfigFile(viper.GetString("server.confFile"))
+	if viper.IsSet("configFile") {
+		viper.SetConfigFile(viper.GetString("configFile"))
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
