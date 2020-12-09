@@ -18,24 +18,59 @@ import (
 	"sync/atomic"
 	"time"
 
-	elastic "github.com/elastic/go-elasticsearch/v7"
+	"github.com/cenkalti/backoff"
+	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/elastic/go-elasticsearch/v7/esutil"
-	log "github.com/sirupsen/logrus"
 	"github.com/tidwall/gjson"
+
+	log "github.com/sirupsen/logrus"
 )
 
 // ElasticConfig is a Struct that holds ElasticSearch config
-type ElasticConfig struct {
+type elasticConfig struct {
+	host       string
+	port       int
 	user       string
 	password   string
-	verifyPeer bool
+	pkiAuth    bool
 	caCert     string
 	clientCert string
 	clientKey  string
+	batchSize  int
+}
+
+type esClient struct {
+	client *elasticsearch.Client
+	conf   elasticConfig
+}
+
+func newElasticClient(config elasticConfig) (*esClient, error) {
+	retryBackoff := backoff.NewExponentialBackOff()
+
+	tr := transportConfigES(config)
+	URI := esURI(config)
+	c, err := elasticsearch.NewClient(elasticsearch.Config{
+		Addresses: []string{
+			URI,
+		},
+		Username:      config.user,
+		Password:      config.password,
+		RetryOnStatus: []int{502, 503, 504, 429},
+		RetryBackoff: func(i int) time.Duration {
+			if i == 1 {
+				retryBackoff.Reset()
+			}
+			return retryBackoff.NextBackOff()
+		},
+		MaxRetries: 5,
+		Transport:  tr,
+	})
+
+	return &esClient{client: c}, err
 }
 
 // transportConfigES is a helper method to setup TLS for the ES client.
-func transportConfigES(config ElasticConfig) http.RoundTripper {
+func transportConfigES(config elasticConfig) http.RoundTripper {
 	cfg := new(tls.Config)
 
 	// Enforce TLS1.2 or higher
@@ -59,7 +94,7 @@ func transportConfigES(config ElasticConfig) http.RoundTripper {
 		}
 	}
 
-	if config.verifyPeer {
+	if config.pkiAuth {
 		if config.clientCert == "" || config.clientKey == "" {
 			log.Fatalf("No client cert or key were provided")
 		}
@@ -93,11 +128,11 @@ func readResponse(r io.Reader) string {
 	return b.String()
 }
 
-func countDocuments(es elastic.Client, indexName string) error {
+func (es esClient) countDocuments(indexName string) error {
 
 	log.Infoln("Couting documents to fetch...")
 	log.Infoln(strings.Repeat("-", 80))
-	cr, err := es.Count(es.Count.WithIndex(indexName))
+	cr, err := es.client.Count(es.client.Count.WithIndex(indexName))
 
 	if err != nil {
 		log.Error(err)
@@ -113,13 +148,13 @@ func countDocuments(es elastic.Client, indexName string) error {
 	return err
 }
 
-func findIndices(es elastic.Client, indexGlob string) ([]string, error) {
+func findIndices(es esClient, indexGlob string) ([]string, error) {
 
 	log.Infoln("Finding indices to fetch...")
 	log.Infoln(strings.Repeat("-", 80))
 
-	catObj := es.Cat.Indices
-	cr, err := es.Cat.Indices(catObj.WithIndex(indexGlob), catObj.WithFormat("JSON"), catObj.WithH("index"))
+	catObj := es.client.Cat.Indices
+	cr, err := es.client.Cat.Indices(catObj.WithIndex(indexGlob), catObj.WithFormat("JSON"), catObj.WithH("index"))
 
 	if err != nil {
 		log.Error(err)
@@ -141,12 +176,18 @@ func findIndices(es elastic.Client, indexGlob string) ([]string, error) {
 
 }
 
-func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string, batchsize int) error {
+func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) error {
 
 	var (
 		batchNum int
 		scrollID string
 	)
+
+	batchsize := 50
+
+	if es.conf.batchSize != 0 {
+		batchsize = es.conf.batchSize
+	}
 
 	targetIndices, err := findIndices(es, indexGlob)
 
@@ -176,17 +217,17 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 			log.Fatalf("Could not initialize encryptor: (%v)", err)
 		}
 
-		_, err = es.Indices.Refresh(es.Indices.Refresh.WithIndex(index))
+		_, err = es.client.Indices.Refresh(es.client.Indices.Refresh.WithIndex(index))
 
 		if err != nil {
 			log.Fatalf("Could not refresh indexes: %v", err)
 		}
 
-		res, err := es.Search(
-			es.Search.WithIndex(index),
-			es.Search.WithSize(batchsize),
-			es.Search.WithSort("_doc"),
-			es.Search.WithScroll(time.Second*60),
+		res, err := es.client.Search(
+			es.client.Search.WithIndex(index),
+			es.client.Search.WithSize(batchsize),
+			es.client.Search.WithSort("_doc"),
+			es.client.Search.WithScroll(time.Second*60),
 		)
 
 		if err != nil {
@@ -212,7 +253,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 		for {
 			batchNum++
 
-			res, err := es.Scroll(es.Scroll.WithScrollID(scrollID), es.Scroll.WithScroll(time.Minute))
+			res, err := es.client.Scroll(es.client.Scroll.WithScrollID(scrollID), es.client.Scroll.WithScroll(time.Minute))
 			if err != nil {
 				log.Fatalf("Error: %s", err)
 			}
@@ -250,7 +291,7 @@ func backupDocuments(sb s3Backend, es elastic.Client, keyPath, indexGlob string,
 	return err
 }
 
-func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string) error {
+func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, indexName string) error {
 	var countSuccessful uint64
 
 	fr, err := sb.NewFileReader(indexName + ".bup")
@@ -282,7 +323,7 @@ func restoreDocuments(sb s3Backend, c elastic.Client, keyPath, indexName string)
 
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         indexName,
-		Client:        &c,
+		Client:        es.client,
 		NumWorkers:    1,
 		FlushBytes:    int(2048),
 		FlushInterval: 30 * time.Second,
@@ -363,7 +404,7 @@ func generateRandomBytes(n int) string {
 	return rb
 }
 
-func esURI (c elasticConfig) string {
+func esURI(c elasticConfig) string {
 	URI := c.host
 
 	URI = fmt.Sprintf(URI+":%d", c.port)

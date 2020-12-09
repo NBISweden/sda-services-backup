@@ -12,16 +12,14 @@ import (
 
 // ClFlags is an struc that holds cl flags info
 type ClFlags struct {
-	indexName string
-	action    string
-	instance  string
-	batchsize int
+	name   string
+	action string
 }
 
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	db      DBConf
-	Elastic ElasticConfig
+	Elastic elasticConfig
 	S3      S3Config
 	keyPath string
 }
@@ -40,10 +38,8 @@ func NewConfig() *Config {
 // getCLflags returns the CL args of indexName and action
 func getCLflags() ClFlags {
 
-	flag.String("action", "create", "action can be create, backup or restore")
-	flag.Int("batchsize", 50, "batchsize for elasticsearch")
-	flag.String("index", "index123", "index name to create, backup or restore")
-	flag.String("instance", "http://127.0.0.1:9200", "elasticsearch instance to perform the action")
+	flag.String("action", "backup", "action can be create, backup or restore")
+	flag.String("name", "", "file name to create, backup or restore")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -53,11 +49,9 @@ func getCLflags() ClFlags {
 	}
 
 	action := viper.GetString("action")
-	batchsize := viper.GetInt("batchsize")
-	indexName := viper.GetString("index")
-	instance := viper.GetString("instance")
+	name := viper.GetString("name")
 
-	return ClFlags{indexName: indexName, action: action, instance: instance, batchsize: batchsize}
+	return ClFlags{name: name, action: action}
 
 }
 
@@ -91,14 +85,31 @@ func configS3Storage() S3Config {
 }
 
 // configElastic populates a ElasticConfig
-func configElastic() ElasticConfig {
-	elastic := ElasticConfig{}
-	elastic.user = viper.GetString("elastic.user")
-	elastic.password = viper.GetString("elastic.password")
-	elastic.verifyPeer = viper.GetBool("elastic.verifypeer")
-	elastic.caCert = viper.GetString("elastic.cacert")
-	elastic.clientCert = viper.GetString("elastic.clientcert")
-	elastic.clientKey = viper.GetString("elastic.clientkey")
+func configElastic() elasticConfig {
+	elastic := elasticConfig{}
+	elastic.host = viper.GetString("elastic.host")
+	elastic.port = viper.GetInt("elastic.port")
+
+	if viper.IsSet("elastic.pkiAuth") {
+		elastic.pkiAuth = viper.GetBool("elastic.pkiAuth")
+		if elastic.pkiAuth {
+			if !viper.IsSet("db.clientcert") || !viper.IsSet("db.clientkey") {
+				log.Fatalln("client certificates are required when pkiAuth is set")
+			}
+
+			elastic.clientCert = viper.GetString("elastic.clientcert")
+			elastic.clientKey = viper.GetString("elastic.clientkey")
+		}
+	}
+
+	if !viper.IsSet("elastic.pkiAuth") || !elastic.pkiAuth {
+		elastic.user = viper.GetString("elastic.user")
+		elastic.password = viper.GetString("elastic.password")
+	}
+
+	if viper.IsSet("elastic.cacert") {
+		elastic.caCert = viper.GetString("elastic.cacert")
+	}
 
 	return elastic
 }
