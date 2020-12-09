@@ -69,3 +69,27 @@ jobs:
       
     - name: Compare documents of the second index
       run: ./scripts/count_check.sh indexabc
+
+    - name: Populate database
+      run: docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submission_file_path,submission_user,submission_file_extension,status,encryption_method) VALUES('test.c4gh','dummy','c4gh','INIT','CRYPT4GH');"
+
+    - name: Dump database
+      run: ./main --action pg_dump
+
+    - name: Drop database
+      run: docker exec db psql -U postgres -d postgres -c "DROP DATABASE test;"
+
+    - name: Create database
+      run: docker exec db psql -U postgres -d postgres -c "CREATE DATABASE test;"
+
+    - name: Restore database
+      run: |
+        DUMPFILE=$(s3cmd -c s3conf ls s3://dumps/ | grep ".sqldump" | cut -d '/' -f4)
+        ./main --action pg_restore --index "$DUMPFILE"
+
+    - name: Check restored database
+      run: |
+        USER=$(docker exec db psql -U postgres -d test -tA -c "select elixir_id from local_ega.files where inbox_path = 'test.c4gh';")
+        if [ "$USER" != "dummy" ]; then
+          exit 1
+        fi

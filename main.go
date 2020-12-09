@@ -62,6 +62,10 @@ func main() {
 		indexName := flags.indexName + "-" + "test"
 		log.Infof("Creating index %s in %s", indexName, flags.instance)
 		indexDocuments(*c, indexName)
+	case "pg_dump":
+		pgDump(*sb, conf.db, conf.keyPath)
+	case "pg_restore":
+		pgRestore(*sb, conf.db, conf.keyPath, flags.indexName)
 	}
 }
 

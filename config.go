@@ -20,6 +20,7 @@ type ClFlags struct {
 
 // Config is a parent object for all the different configuration parts
 type Config struct {
+	db      DBConf
 	Elastic ElasticConfig
 	S3      S3Config
 	keyPath string
@@ -102,9 +103,44 @@ func configElastic() ElasticConfig {
 	return elastic
 }
 
+// configElastic populates a ElasticConfig
+func configPostgres() DBConf {
+	pg := DBConf{}
+	pg.host = viper.GetString("db.host")
+	pg.port = 5432
+	pg.user = viper.GetString("db.user")
+	pg.password = viper.GetString("db.password")
+	pg.database = viper.GetString("db.database")
+	pg.sslMode = "prefer"
+
+	if viper.IsSet("db.port") {
+		pg.port = viper.GetInt("db.port")
+	}
+
+	if viper.IsSet("db.sslMode") {
+		pg.sslMode = viper.GetString("db.sslMode")
+		if pg.sslMode == "verify-full" {
+			if !viper.IsSet("db.clientcert") || !viper.IsSet("db.clientkey") {
+				log.Fatalln("client certificates are required when sslmode is 'verify-full'")
+			}
+
+			pg.clientCert = viper.GetString("db.clientcert")
+			pg.clientKey = viper.GetString("db.clientkey")
+		}
+	}
+
+	if viper.IsSet("db.cacert") {
+		pg.caCert = viper.GetString("db.cacert")
+	}
+
+	return pg
+}
+
 func (c *Config) readConfig() {
 
 	c.S3 = configS3Storage()
+
+	c.db = configPostgres()
 
 	c.Elastic = configElastic()
 
