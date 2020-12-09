@@ -9,10 +9,9 @@ func main() {
 	flags := getCLflags()
 
 	conf := NewConfig()
-	log.Debug(conf.S3)
+	log.Debug(conf.s3)
 
-	sb, err := newS3Backend(conf.S3)
-
+	sb, err := newS3Backend(conf.s3)
 	if err != nil {
 		log.Fatal(err)
 	}

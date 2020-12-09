@@ -19,8 +19,8 @@ type ClFlags struct {
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	db      DBConf
-	Elastic elasticConfig
-	S3      S3Config
+	elastic elasticConfig
+	s3      S3Config
 	keyPath string
 }
 
@@ -149,11 +149,11 @@ func configPostgres() DBConf {
 
 func (c *Config) readConfig() {
 
-	c.S3 = configS3Storage()
+	c.s3 = configS3Storage()
 
 	c.db = configPostgres()
 
-	c.Elastic = configElastic()
+	c.elastic = configElastic()
 
 	c.keyPath = viper.GetString("key")
 
