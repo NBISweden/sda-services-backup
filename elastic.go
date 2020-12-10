@@ -11,6 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
@@ -291,16 +292,16 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 	return err
 }
 
-func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, indexName string) error {
+func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) error {
 	var countSuccessful uint64
 
-	err := es.countDocuments(indexName)
+	err := es.countDocuments(fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Infof("restoring inxed with name %s", indexName)
+	log.Infof("restoring index with name %s", fileName)
 
-	fr, err := sb.NewFileReader(indexName + ".bup")
+	fr, err := sb.NewFileReader(fileName)
 	if err != nil {
 		log.Error(err)
 	}
@@ -327,6 +328,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, indexName string) e
 	}
 	ud := string(data)
 
+	indexName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
 	bi, err := esutil.NewBulkIndexer(esutil.BulkIndexerConfig{
 		Index:         indexName,
 		Client:        es.client,
