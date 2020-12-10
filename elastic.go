@@ -177,7 +177,7 @@ func findIndices(es esClient, indexGlob string) ([]string, error) {
 }
 
 func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) error {
-
+	log.Infof("Backing up indexes that match glob: %s", indexGlob)
 	var (
 		batchNum int
 		scrollID string

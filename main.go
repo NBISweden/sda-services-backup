@@ -23,7 +23,6 @@ func main() {
 
 	switch flags.action {
 	case "es_backup":
-		log.Infof("Loading index %s into %s", flags.name)
 		elastic.backupDocuments(sb, conf.keyPath, flags.name)
 	case "es_restore":
 		elastic.restoreDocuments(sb, conf.keyPath, flags.name)
