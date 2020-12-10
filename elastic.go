@@ -193,7 +193,8 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 	targetIndices, err := findIndices(es, indexGlob)
 
 	if err != nil {
-		log.Fatalf("Could not find indices to fetch: %v", err)
+		log.Errorf("Could not find indices to fetch: %v", err)
+		return err
 	}
 
 	for _, index := range targetIndices {
@@ -209,19 +210,22 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 		e, err := newEncryptor(key, wr)
 
 		if err != nil {
-			log.Fatalf("Could not initialize encryptor: (%v)", err)
+			log.Errorf("Could not initialize encryptor: (%v)", err)
+			return err
 		}
 
 		c, err := newCompressor(key, e)
 
 		if err != nil {
-			log.Fatalf("Could not initialize encryptor: (%v)", err)
+			log.Errorf("Could not initialize encryptor: (%v)", err)
+			return err
 		}
 
 		_, err = es.client.Indices.Refresh(es.client.Indices.Refresh.WithIndex(index))
 
 		if err != nil {
-			log.Fatalf("Could not refresh indexes: %v", err)
+			log.Errorf("Could not refresh indexes: %v", err)
+			return err
 		}
 
 		res, err := es.client.Search(
@@ -233,6 +237,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 		if err != nil {
 			log.Error(err)
+			return err
 		}
 
 		json := readResponse(res.Body)
@@ -241,7 +246,8 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 		hits := gjson.Get(json, "hits.hits")
 		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
-			log.Fatalf("Could not encrypt/write: %s", err)
+			log.Errorf("Could not encrypt/write: %s", err)
+			return err
 		}
 
 		log.Info("Batch   ", batchNum)
@@ -256,10 +262,12 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 			res, err := es.client.Scroll(es.client.Scroll.WithScrollID(scrollID), es.client.Scroll.WithScroll(time.Minute))
 			if err != nil {
-				log.Fatalf("Error: %s", err)
+				log.Errorf("Error: %s", err)
+				return err
 			}
 			if res.IsError() {
-				log.Fatalf("Error response: %s", res)
+				log.Errorf("Error response: %s", res)
+				return err
 			}
 
 			json = readResponse(res.Body)
@@ -276,7 +284,8 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			} else {
 				_, err = c.Write([]byte(hits.Raw + "\n"))
 				if err != nil {
-					log.Fatalf("Could not encrypt/write: %s", err)
+					log.Errorf("Could not encrypt/write: %s", err)
+					return err
 				}
 				log.Info("Batch   ", batchNum)
 				log.Debug("ScrollID", scrollID)
@@ -289,7 +298,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 		wg.Wait()
 	}
 
-	return err
+	return nil
 }
 
 func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) error {
@@ -297,13 +306,15 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 
 	err := es.countDocuments(fileName)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		return err
 	}
 	log.Infof("restoring index with name %s", fileName)
 
 	fr, err := sb.NewFileReader(fileName)
 	if err != nil {
 		log.Error(err)
+		return err
 	}
 	defer fr.Close()
 
@@ -311,21 +322,21 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	r, err := newDecryptor(key, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor", err)
+		return err
 	}
 	d, err := newDecompressor(key, r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
+		return err
 
 	}
 	data, err := ioutil.ReadAll(d)
 	if err != nil {
 		log.Error("Could not read all data: ", err)
+		return err
 	}
 	d.Close()
 
-	if err != nil {
-		log.Error(err)
-	}
 	ud := string(data)
 
 	indexName := strings.TrimSuffix(fileName, filepath.Ext(fileName))
@@ -337,7 +348,8 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 		FlushInterval: 30 * time.Second,
 	})
 	if err != nil {
-		log.Fatalf("Unexpected error: %s", err)
+		log.Errorf("Unexpected error: %s", err)
+		return err
 	}
 	defer bi.Close(context.Background())
 
@@ -373,16 +385,17 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 				},
 			)
 			if err != nil {
-				log.Fatalf("Unexpected error: %s", err)
+				log.Errorf("Unexpected error: %s", err)
+				return err
 			}
 			i++
 		}
 	}
 
-	return err
+	return nil
 }
 
-func (es *esClient) indexDocuments(indexName string) {
+func (es *esClient) indexDocuments(indexName string) error {
 	indexName = indexName + "-" + "test"
 	log.Infof("Creating index %s", indexName)
 
@@ -396,11 +409,13 @@ func (es *esClient) indexDocuments(indexName string) {
 		)
 
 		if err != nil || res.IsError() {
-			log.Error("Error happens here")
-			log.Fatalf("Error: %s: %s", err, res)
+			log.Errorf("Error: %s: %s", err, res)
+			return err
 		}
 		time.Sleep(time.Millisecond * 50)
 	}
+
+	return nil
 }
 
 // GenerateRandomBytes generates a rnd string

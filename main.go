@@ -24,14 +24,29 @@ func main() {
 
 	switch flags.action {
 	case "es_backup":
-		elastic.backupDocuments(sb, conf.keyPath, flags.name)
+		err := elastic.backupDocuments(sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "es_restore":
-		elastic.restoreDocuments(sb, conf.keyPath, flags.name)
+		err := elastic.restoreDocuments(sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "es_create":
-		elastic.indexDocuments(flags.name)
+		err := elastic.indexDocuments(flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "pg_dump":
-		pg.dump(*sb, conf.keyPath)
+		err := pg.dump(*sb, conf.keyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
 	case "pg_restore":
-		pg.restore(*sb, conf.keyPath, flags.name)
+		err := pg.restore(*sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
