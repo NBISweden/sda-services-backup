@@ -27,9 +27,7 @@ func main() {
 	case "es_restore":
 		elastic.restoreDocuments(sb, conf.keyPath, flags.name)
 	case "es_create":
-		indexName := flags.name + "-" + "test"
-		log.Infof("Creating index %s", indexName)
-		elastic.indexDocuments(indexName)
+		elastic.indexDocuments(flags.name)
 	case "pg_dump":
 		pgDump(*sb, conf.db, conf.keyPath)
 	case "pg_restore":

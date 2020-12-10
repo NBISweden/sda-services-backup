@@ -381,6 +381,9 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, indexName string) e
 }
 
 func (es *esClient) indexDocuments(indexName string) {
+	indexName = indexName + "-" + "test"
+	log.Infof("Creating index %s", indexName)
+
 	log.Println("Indexing the documents...")
 	for i := 1; i <= 100; i++ {
 		str := fmt.Sprintf(`{"%s" : "%s"}`, generateRandomBytes(20), generateRandomBytes(10))
