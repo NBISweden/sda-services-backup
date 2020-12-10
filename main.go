@@ -26,11 +26,6 @@ func main() {
 		log.Infof("Loading index %s into %s", flags.name)
 		elastic.backupDocuments(sb, conf.keyPath, flags.name)
 	case "es_restore":
-		err = elastic.countDocuments(flags.name)
-		if err != nil {
-			log.Fatal(err)
-		}
-		log.Infof("Dumping index %s into %s", flags.name)
 		elastic.restoreDocuments(sb, conf.keyPath, flags.name)
 	case "es_create":
 		indexName := flags.name + "-" + "test"

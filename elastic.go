@@ -294,6 +294,12 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, indexName string) error {
 	var countSuccessful uint64
 
+	err := es.countDocuments(indexName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Infof("restoring inxed with name %s", indexName)
+
 	fr, err := sb.NewFileReader(indexName + ".bup")
 	if err != nil {
 		log.Error(err)
