@@ -9,6 +9,7 @@ func main() {
 	flags := getCLflags()
 
 	conf := NewConfig()
+	pg := conf.db
 	log.Debug(conf.s3)
 
 	sb, err := newS3Backend(conf.s3)
@@ -29,8 +30,8 @@ func main() {
 	case "es_create":
 		elastic.indexDocuments(flags.name)
 	case "pg_dump":
-		pgDump(*sb, conf.db, conf.keyPath)
+		pg.dump(*sb, conf.keyPath)
 	case "pg_restore":
-		pgRestore(*sb, conf.db, conf.keyPath, flags.name)
+		pg.restore(*sb, conf.keyPath, flags.name)
 	}
 }

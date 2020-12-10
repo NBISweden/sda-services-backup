@@ -25,7 +25,7 @@ type DBConf struct {
 	clientKey  string
 }
 
-func pgDump(sb s3Backend, db DBConf, keyPath string) {
+func (db DBConf) dump(sb s3Backend, keyPath string) {
 	today := time.Now().Format("20060102150405")
 	dbURI := buildConnInfo(db)
 	cmd := exec.Command("pg_dump", dbURI, "-xF", "tar")
@@ -68,7 +68,7 @@ func pgDump(sb s3Backend, db DBConf, keyPath string) {
 	wg.Wait()
 }
 
-func pgRestore(sb s3Backend, db DBConf, keyPath, sqlDump string) {
+func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) {
 
 	fr, err := sb.NewFileReader(sqlDump)
 	if err != nil {
