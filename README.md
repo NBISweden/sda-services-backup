@@ -83,10 +83,7 @@ elastic:
   #port: 9200 #only neede if the port difers from the standard HTTP/HTTPS ports
   user: "elastic-user"
   password: "elastic-password"
-  #pkiAuth: false #If PKI authentication is enabled username and password can be omitted
   #cacert: "path/to/ca-root"
-  #clientcert: "path/to/clientcert" #
-  #clientkey: "path/to/clientkey" #
 db:
   host: "hostname or IP" #pg.example.com, 127.0.0.1
   #port: 5432 #only needed if the postgresql databse listens to a different port

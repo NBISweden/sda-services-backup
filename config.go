@@ -89,23 +89,8 @@ func configElastic() elasticConfig {
 	elastic := elasticConfig{}
 	elastic.host = viper.GetString("elastic.host")
 	elastic.port = viper.GetInt("elastic.port")
-
-	if viper.IsSet("elastic.pkiAuth") {
-		elastic.pkiAuth = viper.GetBool("elastic.pkiAuth")
-		if elastic.pkiAuth {
-			if !viper.IsSet("db.clientcert") || !viper.IsSet("db.clientkey") {
-				log.Fatalln("client certificates are required when pkiAuth is set")
-			}
-
-			elastic.clientCert = viper.GetString("elastic.clientcert")
-			elastic.clientKey = viper.GetString("elastic.clientkey")
-		}
-	}
-
-	if !viper.IsSet("elastic.pkiAuth") || !elastic.pkiAuth {
-		elastic.user = viper.GetString("elastic.user")
-		elastic.password = viper.GetString("elastic.password")
-	}
+	elastic.user = viper.GetString("elastic.user")
+	elastic.password = viper.GetString("elastic.password")
 
 	if viper.IsSet("elastic.cacert") {
 		elastic.caCert = viper.GetString("elastic.cacert")

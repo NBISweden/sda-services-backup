@@ -12,10 +12,7 @@ elastic:
   port: 9200
   user: "elastic"
   password: "elastic"
-  pkiAuth: false
   cacert: ""
-  clientcert: ""
-  clientkey: ""
 db:
   host: "127.0.0.1"
   user: "postgres"

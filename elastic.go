@@ -33,10 +33,7 @@ type elasticConfig struct {
 	port       int
 	user       string
 	password   string
-	pkiAuth    bool
 	caCert     string
-	clientCert string
-	clientKey  string
 	batchSize  int
 }
 
@@ -92,24 +89,6 @@ func transportConfigES(config elasticConfig) http.RoundTripper {
 		}
 		if ok := cfg.RootCAs.AppendCertsFromPEM(cacert); !ok {
 			log.Debug("no certs appended, using system certs only")
-		}
-	}
-
-	if config.pkiAuth {
-		if config.clientCert == "" || config.clientKey == "" {
-			log.Fatalf("No client cert or key were provided")
-		}
-
-		cert, e := ioutil.ReadFile(config.clientCert)
-		if e != nil {
-			log.Fatalf("failed to append client cert %q: %v", config.clientCert, e)
-		}
-		key, e := ioutil.ReadFile(config.clientKey)
-		if e != nil {
-			log.Fatalf("failed to append key %q: %v", config.clientKey, e)
-		}
-		if certs, e := tls.X509KeyPair(cert, key); e == nil {
-			cfg.Certificates = append(cfg.Certificates, certs)
 		}
 	}
 
