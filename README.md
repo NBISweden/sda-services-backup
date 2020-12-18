@@ -1,58 +1,97 @@
 # Elasticsearch backups
 
+## Build the app
+
+```cmd
+go build -ldflags "-extldflags -static" -o backup-svc .
+```
+
+## Configuration
+
+The specific config file to be used can be set via the environmental variable `CONFIGFILE`,
+which holds the full path to the config file.
+
+All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.  
+ENVs will overrule values set in the config file
+
+For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
+
 ## Create a key
 
-## Create some indices in ES
+The encryption key should be in `aes-256-gcm` format and needs to be passed as as bas64 encoded string in a file
+
+## Elasticsearch
+
+### Backing up encrypted index to S3
 
 ```cmd
-./main --action create --index index123
+./backup-svc --action es_backup --name [ can be a glob `*INDEX-NAME*` ]
 ```
 
-## Backing up encrypted index to S3
+* backup will be stored in S3 in the format of FULL-ES-INDEX-NAME.bup
+
+Verify that the backup worked:
 
 ```cmd
-./main --action backup --index index123-test
-s3cmd ls -c s3conf s3://dumps
-s3cmd get -c s3conf s3://dumps/index123-test.bup
+s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 ```
 
-## Restoring index from S3 to ES
+### Restoring index from S3 to ES
 
 ```cmd
-./main --action restore --index index123-test --instance http://127.0.0.1:9201
+./backup-svc --action es_restore --name S3-OBJECT-NAME
 ```
 
-## Backing up a database
+## Create some indices in ES (only for teting)
 
 ```cmd
-./main --action pg_dump
+./backup-svc --action es_create --name INDEX-NAME
 ```
 
-## Restoring up a database
+## Postgres backup
 
-The target database must exist when restoring the data.
+### Backing up a database
+
+* backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.sqldump`
 
 ```cmd
-./main --action pg_restore --index <pg-dump-file> 
+./backup-svc --action pg_dump
 ```
 
-## Example script configuration
+### Restoring up a database
+
+* The target database must exist when restoring the data.
+
+```cmd
+./backup-svc --action pg_restore --name PG-DUMP-FILE
+```
+
+## Example configuration file
 
 ```yaml
+encryptionKey: "aes256.key"
+loglevel: debug
 s3:
-  url: "https://127.0.0.1"
-  port: 9000
-  accesskey: "myaccesskey"
-  secretkey: "mysecretkey"
-  bucket: "dumps"
-  #chunksize: 32
-  cacert: "./certs/ca.pem"
+  url: "FQDN URI" #https://s3.example.com
+  #port: 9000 #only needed if the port difers from the standard HTTP/HTTPS ports
+  accesskey: "accesskey"
+  secretkey: "secret-accesskey"
+  bucket: "bucket-name"
+  #cacert: "path/to/ca-root"
 elastic:
-  user: "elastic"
-  password: "elastic"
+  host: "FQDN URI" #https://es.example.com
+  #port: 9200 #only neede if the port difers from the standard HTTP/HTTPS ports
+  user: "elastic-user"
+  password: "elastic-password"
+  #cacert: "path/to/ca-root"
 db:
-  host: "localhost"
-  user: "postgres"
-  password: "postgres"
-  database: "test"
+  host: "hostname or IP" #pg.example.com, 127.0.0.1
+  #port: 5432 #only needed if the postgresql databse listens to a different port
+  user: "db-user"
+  password: "db-password"
+  database: "database-name"
+  #cacert: "path/to/ca-root"
+  #clientcert: "path/to/clientcert" #only needed if sslmode = verify-peer
+  #clientkey: "path/to/clientkey" #only needed if sslmode = verify-peer
+  #sslmode: "verify-peer" #
 ```

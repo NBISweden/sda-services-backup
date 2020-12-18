@@ -6,9 +6,9 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [ubuntu-latest]
+        test: [db_test, es_test]
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
 
     steps:
 
@@ -28,68 +28,11 @@ jobs:
     - name: install s3cmd
       run: pip3 install s3cmd
 
-    - name: create data folders
-      run: mkdir data datasecond && sudo chmod 777 -R data && sudo chmod 777 -R datasecond
-
     - name: Start virtual infrastructure
-      run: docker-compose -f ./docker-compose.yml up -d --force-recreate --build
+      run: docker-compose -f ./dev_tools/docker-compose.yml up -d --force-recreate --build
 
     - name: Wait for containers to start
-      run: sh ./scripts/readiness.sh
+      run: bash ./dev_tools/scripts/readiness.sh
 
-    - name: Build packages
-      run: go build .
-
-    - name: Create test index
-      run: ./main --action create --index index123 --instance http://127.0.0.1:9200
-    
-    - name: Create second test index
-      run: ./main --action create --index indexabc --instance http://127.0.0.1:9200
-
-    - name: Backup test index to S3
-      run: ./main --action backup --index "*index*" --instance http://127.0.0.1:9200
-
-    - name: List s3 repo
-      run: s3cmd ls -c s3conf s3://dumps
-
-    - name: Get dump file
-      run: s3cmd get -c s3conf s3://dumps/index123-test.bup
-      
-    - name: Get second dump file
-      run: s3cmd get -c s3conf s3://dumps/indexabc-test.bup
-
-    - name: Restore test index from S3
-      run: ./main --action restore --index index123-test --instance http://127.0.0.1:9201 && sleep 2
-    
-    - name: Restore second test index from S3
-      run: ./main --action restore --index indexabc-test --instance http://127.0.0.1:9201 && sleep 2
-
-    - name: Compare documents of the first index
-      run: ./scripts/count_check.sh index123
-      
-    - name: Compare documents of the second index
-      run: ./scripts/count_check.sh indexabc
-
-    - name: Populate database
-      run: docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submission_file_path,submission_user,submission_file_extension,status,encryption_method) VALUES('test.c4gh','dummy','c4gh','INIT','CRYPT4GH');"
-
-    - name: Dump database
-      run: ./main --action pg_dump
-
-    - name: Drop database
-      run: docker exec db psql -U postgres -d postgres -c "DROP DATABASE test;"
-
-    - name: Create database
-      run: docker exec db psql -U postgres -d postgres -c "CREATE DATABASE test;"
-
-    - name: Restore database
-      run: |
-        DUMPFILE=$(s3cmd -c s3conf ls s3://dumps/ | grep ".sqldump" | cut -d '/' -f4)
-        ./main --action pg_restore --index "$DUMPFILE"
-
-    - name: Check restored database
-      run: |
-        USER=$(docker exec db psql -U postgres -d test -tA -c "select elixir_id from local_ega.files where inbox_path = 'test.c4gh';")
-        if [ "$USER" != "dummy" ]; then
-          exit 1
-        fi
+    - name: Run test
+      run: bash ./dev_tools/scripts/${{ matrix.test }}.sh

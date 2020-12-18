@@ -12,17 +12,15 @@ import (
 
 // ClFlags is an struc that holds cl flags info
 type ClFlags struct {
-	indexName string
-	action    string
-	instance  string
-	batchsize int
+	name   string
+	action string
 }
 
 // Config is a parent object for all the different configuration parts
 type Config struct {
 	db      DBConf
-	Elastic ElasticConfig
-	S3      S3Config
+	elastic elasticConfig
+	s3      S3Config
 	keyPath string
 }
 
@@ -40,10 +38,8 @@ func NewConfig() *Config {
 // getCLflags returns the CL args of indexName and action
 func getCLflags() ClFlags {
 
-	flag.String("action", "create", "action can be create, backup or restore")
-	flag.Int("batchsize", 50, "batchsize for elasticsearch")
-	flag.String("index", "index123", "index name to create, backup or restore")
-	flag.String("instance", "http://127.0.0.1:9200", "elasticsearch instance to perform the action")
+	flag.String("action", "backup", "action can be create, backup or restore")
+	flag.String("name", "", "file name to create, backup or restore")
 
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
@@ -53,11 +49,9 @@ func getCLflags() ClFlags {
 	}
 
 	action := viper.GetString("action")
-	batchsize := viper.GetInt("batchsize")
-	indexName := viper.GetString("index")
-	instance := viper.GetString("instance")
+	name := viper.GetString("name")
 
-	return ClFlags{indexName: indexName, action: action, instance: instance, batchsize: batchsize}
+	return ClFlags{name: name, action: action}
 
 }
 
@@ -91,14 +85,16 @@ func configS3Storage() S3Config {
 }
 
 // configElastic populates a ElasticConfig
-func configElastic() ElasticConfig {
-	elastic := ElasticConfig{}
+func configElastic() elasticConfig {
+	elastic := elasticConfig{}
+	elastic.host = viper.GetString("elastic.host")
+	elastic.port = viper.GetInt("elastic.port")
 	elastic.user = viper.GetString("elastic.user")
 	elastic.password = viper.GetString("elastic.password")
-	elastic.verifyPeer = viper.GetBool("elastic.verifypeer")
-	elastic.caCert = viper.GetString("elastic.cacert")
-	elastic.clientCert = viper.GetString("elastic.clientcert")
-	elastic.clientKey = viper.GetString("elastic.clientkey")
+
+	if viper.IsSet("elastic.cacert") {
+		elastic.caCert = viper.GetString("elastic.cacert")
+	}
 
 	return elastic
 }
@@ -138,16 +134,16 @@ func configPostgres() DBConf {
 
 func (c *Config) readConfig() {
 
-	c.S3 = configS3Storage()
+	c.s3 = configS3Storage()
 
 	c.db = configPostgres()
 
-	c.Elastic = configElastic()
+	c.elastic = configElastic()
 
-	c.keyPath = viper.GetString("key")
+	c.keyPath = viper.GetString("encryptionKey")
 
-	if viper.IsSet("log.level") {
-		stringLevel := viper.GetString("log.level")
+	if viper.IsSet("loglevel") {
+		stringLevel := viper.GetString("loglevel")
 		intLevel, err := log.ParseLevel(stringLevel)
 		if err != nil {
 			log.Printf("Log level '%s' not supported, setting to 'trace'", stringLevel)
@@ -164,13 +160,13 @@ func parseConfig() {
 	viper.AutomaticEnv()
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.SetConfigType("yaml")
-	if viper.IsSet("server.confPath") {
-		cp := viper.GetString("server.confPath")
+	if viper.IsSet("configPath") {
+		cp := viper.GetString("conifgPath")
 		ss := strings.Split(strings.TrimLeft(cp, "/"), "/")
 		viper.AddConfigPath(path.Join(ss...))
 	}
-	if viper.IsSet("server.confFile") {
-		viper.SetConfigFile(viper.GetString("server.confFile"))
+	if viper.IsSet("configFile") {
+		viper.SetConfigFile(viper.GetString("configFile"))
 	}
 
 	if err := viper.ReadInConfig(); err != nil {
