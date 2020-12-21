@@ -4,6 +4,10 @@ docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submissio
 
 CONFIGFILE="dev_tools/config.yaml" go run . --action pg_dump
 
+if [ $? != 0 ]; then
+    exit 1
+fi
+
 docker exec db psql -U postgres -d postgres -c "DROP DATABASE test;"
 
 docker exec db psql -U postgres -d postgres -c "CREATE DATABASE test;"

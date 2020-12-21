@@ -10,6 +10,10 @@ done
 
 CONFIGFILE="dev_tools/config.yaml" go run . --action es_backup --name "*$NOW*"
 
+if [ $? != 0 ]; then
+  exit 1
+fi
+
 s3cmd ls -c dev_tools/s3conf s3://dumps/
 
 CONFIGFILE="dev_tools/config.yaml" ELASTIC_PORT=9201 go run . --action es_restore --name "$NOW-123.bup"
