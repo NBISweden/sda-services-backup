@@ -9,7 +9,7 @@ for i in {1..100}; do
 done
 
 CONFIGFILE="dev_tools/config.yaml" go run . --action es_backup --name "*$NOW*"
-
+# bail early since if this fails the rest will fail also
 if [ $? != 0 ]; then
   exit 1
 fi
