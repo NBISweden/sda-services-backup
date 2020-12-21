@@ -3,17 +3,14 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
 	"crypto/tls"
 	"crypto/x509"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -372,41 +369,6 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	}
 
 	return nil
-}
-
-func (es *esClient) indexDocuments(indexName string) error {
-	indexName = indexName + "-" + "test"
-	log.Infof("Creating index %s", indexName)
-
-	log.Println("Indexing the documents...")
-	for i := 1; i <= 100; i++ {
-		str := fmt.Sprintf(`{"%s" : "%s"}`, generateRandomBytes(20), generateRandomBytes(10))
-		res, err := es.client.Index(
-			indexName,
-			strings.NewReader(str),
-			es.client.Index.WithDocumentID(strconv.Itoa(i)),
-		)
-
-		if err != nil || res.IsError() {
-			log.Errorf("Error: %s: %s", err, res)
-			return err
-		}
-		time.Sleep(time.Millisecond * 50)
-	}
-
-	return nil
-}
-
-// GenerateRandomBytes generates a rnd string
-func generateRandomBytes(n int) string {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
-	if err != nil {
-		log.Fatal(err)
-	}
-	rb := base64.StdEncoding.EncodeToString(b)
-
-	return rb
 }
 
 func esURI(c elasticConfig) string {

@@ -33,11 +33,6 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
-	case "es_create":
-		err := elastic.indexDocuments(flags.name)
-		if err != nil {
-			log.Fatal(err)
-		}
 	case "pg_dump":
 		err := pg.dump(*sb, conf.keyPath)
 		if err != nil {
