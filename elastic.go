@@ -26,12 +26,12 @@ import (
 
 // ElasticConfig is a Struct that holds ElasticSearch config
 type elasticConfig struct {
-	host       string
-	port       int
-	user       string
-	password   string
-	caCert     string
-	batchSize  int
+	host      string
+	port      int
+	user      string
+	password  string
+	caCert    string
+	batchSize int
 }
 
 type esClient struct {
