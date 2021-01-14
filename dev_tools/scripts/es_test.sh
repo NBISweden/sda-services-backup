@@ -2,7 +2,7 @@
 
 num=100
 
-if [ ! -z $1 ]; then
+if [ -n $1 ]; then
   num=$1
 fi
 
