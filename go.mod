@@ -3,7 +3,7 @@ module main
 go 1.14
 
 require (
-	github.com/aws/aws-sdk-go v1.36.28
+	github.com/aws/aws-sdk-go v1.36.29
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.10.0
 	github.com/lib/pq v1.9.0
