@@ -94,7 +94,53 @@ services:
     volumes:
       - ./certs:/certs:ro
       - pgData:/data
+  mongodb-0:
+    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    container_name: mongodb-0
+    healthcheck:
+      test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-0
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+      - MONGODB_REPLICA_SET_NAME=rs0
+      - MONGODB_EXTRA_FLAGS=--tlsMode=requireTLS --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+      - MONGODB_CLIENT_EXTRA_FLAGS=--tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_master_data:/bitnami/mongodb
+      - ./certs:/certs:ro
+  mongodb-1:
+    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    container_name: mongodb-1
+    healthcheck:
+      test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    depends_on:
+      - mongodb-0
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-1
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-0
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+      - MONGODB_REPLICA_SET_NAME=rs0
+      - MONGODB_EXTRA_FLAGS=--tlsMode=requireTLS --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+      - MONGODB_CLIENT_EXTRA_FLAGS=--tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./certs:/certs:ro
 volumes:
   data:
   datasecond:
   pgData:
+  mongodb_master_data:
+
