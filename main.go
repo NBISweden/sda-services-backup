@@ -22,6 +22,8 @@ func main() {
 		log.Fatal(err)
 	}
 
+	mongo := conf.mongo
+
 	switch flags.action {
 	case "es_backup":
 		err := elastic.backupDocuments(sb, conf.keyPath, flags.name)
@@ -30,6 +32,16 @@ func main() {
 		}
 	case "es_restore":
 		err := elastic.restoreDocuments(sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "mongo_dump":
+		err := mongo.dump(*sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "mongo_restore":
+		err := mongo.restore(*sb, conf.keyPath, flags.name)
 		if err != nil {
 			log.Fatal(err)
 		}
