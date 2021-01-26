@@ -20,3 +20,12 @@ db:
   database: "test"
   cacert: "./dev_tools/certs/ca.pem"
   sslmode: "allow"
+mongo:
+  host: "127.0.0.1:27017"
+  user: "backup"
+  password: "backup"
+  authSource: "admin"
+  replicaset: ""
+  cacert: "./dev_tools/certs/ca.pem"
+  clientcert: "./dev_tools/certs/server.pem"
+  tls: true
