@@ -8,6 +8,6 @@ ENV GOOS=linux
 RUN go build -ldflags "-extldflags -static" -o backup-svc .
 
 FROM alpine:3.13.0
-RUN apk add --no-cache postgresql-client
+RUN apk add --no-cache postgresql-client mongodb-tools
 COPY --from=0 go/backup-svc /usr/local/bin/
 USER 65534
