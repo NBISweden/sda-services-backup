@@ -66,6 +66,24 @@ s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 ./backup-svc --action pg_restore --name PG-DUMP-FILE
 ```
 
+## MongoDB
+
+### Backing up a database
+
+* backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.archive`
+
+```cmd
+./backup-svc --action mongo_dump --name <DBNAME>
+```
+
+### Restoring up a database
+
+
+```cmd
+./backup-svc --action mongo_restore --name MONGO-ARCHIVE-FILE
+```
+
+
 ## Example configuration file
 
 ```yaml
@@ -94,4 +112,13 @@ db:
   #clientcert: "path/to/clientcert" #only needed if sslmode = verify-peer
   #clientkey: "path/to/clientkey" #only needed if sslmode = verify-peer
   #sslmode: "verify-peer" #
+mongo:
+  host: "hostname or IP with portnuber" #example.com:portnumber, 127.0.0.1:27017
+  user: "backup"
+  password: "backup"
+  authSource: "admin"
+  replicaset: ""
+  #tls: true
+  #cacert: "path/to/ca-root" #optional
+  #clientcert: "path/to/clientcert" # needed if tls=true
 ```
