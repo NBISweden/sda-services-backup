@@ -1,8 +1,8 @@
 version: "3.7"
 services:
-  mys3:
+  minio:
     command: server /data
-    container_name: mys3
+    container_name: s3
     environment:
       - MINIO_ACCESS_KEY=myaccesskey
       - MINIO_SECRET_KEY=mysecretkey
