@@ -1,0 +1,31 @@
+encryptionKey: "/conf/keys/backup.key"
+loglevel: debug
+s3:
+  url: "https://s3"
+  port: 9000
+  accesskey: "myaccesskey"
+  secretkey: "mysecretkey"
+  bucket: "dumps"
+  cacert: "/conf/certs/ca.pem"
+elastic:
+  host: "http://elastic"
+  port: 9200
+  user: "elastic"
+  password: "elastic"
+  cacert: ""
+db:
+  host: "db"
+  user: "postgres"
+  password: "postgres"
+  database: "test"
+  cacert: "/conf/certs/ca.pem"
+  sslmode: "allow"
+mongo:
+  host: "mongodb-0:27017,mongodb-1:27017"
+  user: "backup"
+  password: "backup"
+  authSource: "admin"
+  replicaSet: "rs0"
+  cacert: "/conf/certs/ca.pem"
+  clientcert: "/conf/certs/server.pem"
+  tls: true
