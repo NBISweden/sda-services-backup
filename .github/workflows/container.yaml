@@ -1,0 +1,42 @@
+name: Container test
+
+on: [pull_request]
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        test: [mongo_test]
+
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Set up Python
+      uses: actions/setup-python@v1
+      with:
+        python-version: '3.6'
+
+    - name: install s3cmd
+      run: pip3 install s3cmd
+
+    - name: Check out
+      uses: actions/checkout@v2
+
+    - name: Set up Go
+      uses: actions/setup-go@v2
+      with:
+        go-version: '1.15.4'
+
+    - name: Build backup-svc container
+      run: docker build -t nbisweden/sda-backup:test .
+
+
+    - name: Start virtual infrastructure
+      run: docker-compose -f ./dev_tools/docker-compose.yml up -d --force-recreate
+
+    - name: Wait for containers to start
+      run: bash ./dev_tools/scripts/readiness.sh
+
+    - name: Run test
+      run: bash ./dev_tools/scripts/${{ matrix.test }}.sh docker
