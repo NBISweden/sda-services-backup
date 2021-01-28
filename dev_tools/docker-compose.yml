@@ -16,8 +16,8 @@ services:
       - "9000:9000"
     volumes:
       - ./certs/ca.pem:/root/.minio/certs/CAs/public.crt:ro
-      - ./certs/s3.pem:/root/.minio/certs/public.crt:ro
-      - ./certs/s3-key.pem:/root/.minio/certs/private.key:ro
+      - ./certs/server.crt:/root/.minio/certs/public.crt:ro
+      - ./certs/server.key:/root/.minio/certs/private.key:ro
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
     container_name: elastic
@@ -70,7 +70,7 @@ services:
     depends_on:
       - tlsFixer
     container_name: db
-    command: -c ssl=on -c ssl_cert_file=/data/certs/s3.pem -c ssl_key_file=/data/certs/s3-key.pem -c ssl_ca_file=/data/certs/ca.pem
+    command: -c ssl=on -c ssl_cert_file=/data/certs/server.crt -c ssl_key_file=/data/certs/server.key -c ssl_ca_file=/data/certs/ca.pem
     environment:
       - POSTGRES_PASSWORD=postgres
       - PGDATA=/data/pgdata
@@ -90,7 +90,7 @@ services:
   tlsFixer:
     image: alpine:3.12
     container_name: fixer
-    command: sh -c "mkdir -p /data/certs/ && cp /certs/* /data/certs && chmod 600 /data/certs/*key.pem && chown 70:70 /data/certs/*"
+    command: sh -c "mkdir -p /data/certs/ && cp /certs/* /data/certs && chmod 600 /data/certs/*.key && chown 70:70 /data/certs/*"
     volumes:
       - ./certs:/certs:ro
       - pgData:/data
