@@ -1,9 +1,18 @@
 #!/bin/bash
 
 num=100
+docker=false
 
-if [ -n "$1" ]; then
+if [ -n "$1" ] && [ "$1" -eq "$1" ]; then
   num=$1
+elif [ -n "$1" ] && [ "$1" == "$1" ]; then
+  docker=$1
+fi
+
+if [ -n "$2" ] && [ "$2" -eq "$2" ]; then
+  num=$2
+elif [ -n "$2" ] && [ "$2" == "$2" ]; then
+  docker=$2
 fi
 
 NOW=$(date '+%Y%m%d%H%M')
@@ -18,7 +27,11 @@ done
 # create user with only "backup" and "restore" permissions
 docker exec mongodb-0 mongo admin -u root -p password123 --host localhost:27017 $TLS --eval 'db.createUser({user: "backup", pwd: "backup", roles: [{role: "backup", db:"admin"},{role: "restore",db: "admin"}]})' || true
 
-CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_dump --name "$NOW"
+if [ "$docker" == "docker" ]; then
+  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config.yaml" nbisweden/sda-backup:test backup-svc --action mongo_dump --name $NOW
+else
+  CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_dump --name "$NOW"
+fi
 
 # bail early since if this fails the rest will fail also
 if [ $? != 0 ]; then
@@ -34,8 +47,12 @@ docker exec mongodb-0 mongo -u root -p password123 --host localhost:27017 $TLS -
 
 DUMPFILE=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep "$NOW.archive" | cut -d '/' -f4)
 echo "restoring databse from file $DUMPFILE"
-CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_restore --name "$DUMPFILE"
 
+if [ "$2" == "docker" ]; then
+  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config.yaml" nbisweden/sda-backup:test backup-svc --action mongo_restore --name "$DUMPFILE"
+else
+  CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_restore --name "$DUMPFILE"
+fi
 sleep 5
 
 COUNT_2=$(docker exec mongodb-0 mongo -u root -p password123 --host localhost:27017 $TLS --eval 'db.getSiblingDB("'$NOW'").stats().objects' --quiet | tr -d "\r")
