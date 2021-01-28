@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"io/ioutil"
 	"os/exec"
 	"sync"
 	"time"
@@ -99,12 +98,6 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 		return err
 
 	}
-	data, err := ioutil.ReadAll(d)
-	if err != nil {
-		log.Error("Could not read all data: ", err)
-		return err
-	}
-	d.Close()
 
 	restoreCommand := buildRestoreCommand(mongo)
 	log.Debugln(restoreCommand)
@@ -112,7 +105,13 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	var in bytes.Buffer
 	cmd.Stdin = &in
-	in.Write(data)
+
+	_, err = in.ReadFrom(d)
+	if err != nil {
+		log.Error("Could not read datastream", err)
+		return err
+
+	}
 
 	var errMsg bytes.Buffer
 	cmd.Stderr = &errMsg
