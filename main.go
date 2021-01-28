@@ -9,7 +9,6 @@ func main() {
 	flags := getCLflags()
 
 	conf := NewConfig()
-	pg := conf.db
 	log.Debug(conf.s3)
 
 	sb, err := newS3Backend(conf.s3)
@@ -17,12 +16,23 @@ func main() {
 		log.Fatal(err)
 	}
 
-	elastic, err := newElasticClient(conf.elastic)
-	if err != nil {
-		log.Fatal(err)
+	var elastic *esClient
+	if conf.elastic != (elasticConfig{}) {
+		elastic, err = newElasticClient(conf.elastic)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 
-	mongo := conf.mongo
+	var mongo mongoConfig
+	if conf.mongo != (mongoConfig{}) {
+		mongo = conf.mongo
+	}
+
+	var pg DBConf
+	if conf.db != (DBConf{}) {
+		pg = conf.db
+	}
 
 	switch flags.action {
 	case "es_backup":
