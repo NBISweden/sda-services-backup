@@ -2,7 +2,7 @@
 
 num=100
 
-if [ -n $1 ]; then
+if [ -n "$1" ]; then
   num=$1
 fi
 
@@ -14,7 +14,7 @@ for i in $(seq 1 $num); do
   curl -XPOST "http://127.0.0.1:9200/$NOW-123/_doc/$i" -d "{\"$name\": \"$text\" }" -H "Content-Type: application/json"
 done
 
-CONFIGFILE="dev_tools/config.yaml" go run . --action es_backup --name "*$NOW*"
+CONFIGFILE="dev_tools/config_elastic.yaml" go run . --action es_backup --name "*$NOW*"
 # bail early since if this fails the rest will fail also
 if [ $? != 0 ]; then
   exit 1
@@ -22,7 +22,7 @@ fi
 
 s3cmd ls -c dev_tools/s3conf s3://dumps/
 
-CONFIGFILE="dev_tools/config.yaml" ELASTIC_PORT=9201 go run . --action es_restore --name "$NOW-123.bup"
+CONFIGFILE="dev_tools/config_elastic.yaml" ELASTIC_PORT=9201 go run . --action es_restore --name "$NOW-123.bup"
 
 sleep 5
 
