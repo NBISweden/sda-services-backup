@@ -1,6 +1,6 @@
 #!/bin/bash
 RETRY_TIMES=0
-for p in elastic elastic2 mys3 db
+for p in elastic elastic2 s3 db mongodb-0 mongodb-1
 do
   until [ $(docker inspect --format "{{json .State.Health.Status }}" $p) = "\"healthy\"" ]
   do

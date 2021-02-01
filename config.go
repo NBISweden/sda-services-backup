@@ -20,6 +20,7 @@ type ClFlags struct {
 type Config struct {
 	db      DBConf
 	elastic elasticConfig
+	mongo   mongoConfig
 	s3      S3Config
 	keyPath string
 }
@@ -132,11 +133,51 @@ func configPostgres() DBConf {
 	return pg
 }
 
+// configMongoDB populates a MongoConfig
+func configMongoDB() mongoConfig {
+	mongo := mongoConfig{}
+	mongo.host = viper.GetString("mongo.host")
+	mongo.user = viper.GetString("mongo.user")
+	mongo.password = viper.GetString("mongo.password")
+
+	if viper.IsSet("mongo.authSource") {
+		mongo.authSource = viper.GetString("mongo.authSource")
+	}
+
+	if viper.IsSet("mongo.tls") {
+		mongo.tls = viper.GetBool("mongo.tls")
+	}
+
+	if viper.IsSet("mongo.port") {
+		mongo.port = viper.GetInt("mongo.port")
+	}
+
+	if viper.IsSet("mongo.tls") {
+		mongo.tls = viper.GetBool("mongo.tls")
+		if viper.IsSet("db.cacert") {
+			mongo.caCert = viper.GetString("mongo.cacert")
+		}
+		if viper.IsSet("mongo.clientcert") {
+			mongo.clientCert = viper.GetString("mongo.clientcert")
+			if mongo.clientCert == "" {
+				log.Fatalln("client cert is required if TLS is true")
+			}
+		}
+	}
+
+	if viper.IsSet("mongo.replicaSet") {
+		mongo.replicaSet = viper.GetString("mongo.replicaSet")
+	}
+	return mongo
+}
+
 func (c *Config) readConfig() {
 
 	c.s3 = configS3Storage()
 
 	c.db = configPostgres()
+
+	c.mongo = configMongoDB()
 
 	c.elastic = configElastic()
 

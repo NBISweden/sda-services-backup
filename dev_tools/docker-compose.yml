@@ -1,8 +1,8 @@
 version: "3.7"
 services:
-  mys3:
+  minio:
     command: server /data
-    container_name: mys3
+    container_name: s3
     environment:
       - MINIO_ACCESS_KEY=myaccesskey
       - MINIO_SECRET_KEY=mysecretkey
@@ -16,8 +16,8 @@ services:
       - "9000:9000"
     volumes:
       - ./certs/ca.pem:/root/.minio/certs/CAs/public.crt:ro
-      - ./certs/s3.pem:/root/.minio/certs/public.crt:ro
-      - ./certs/s3-key.pem:/root/.minio/certs/private.key:ro
+      - ./certs/server.crt:/root/.minio/certs/public.crt:ro
+      - ./certs/server.key:/root/.minio/certs/private.key:ro
   elastic:
     image: docker.elastic.co/elasticsearch/elasticsearch:7.9.0
     container_name: elastic
@@ -70,7 +70,7 @@ services:
     depends_on:
       - tlsFixer
     container_name: db
-    command: -c ssl=on -c ssl_cert_file=/data/certs/s3.pem -c ssl_key_file=/data/certs/s3-key.pem -c ssl_ca_file=/data/certs/ca.pem
+    command: -c ssl=on -c ssl_cert_file=/data/certs/server.crt -c ssl_key_file=/data/certs/server.key -c ssl_ca_file=/data/certs/ca.pem
     environment:
       - POSTGRES_PASSWORD=postgres
       - PGDATA=/data/pgdata
@@ -90,11 +90,57 @@ services:
   tlsFixer:
     image: alpine:3.12
     container_name: fixer
-    command: sh -c "mkdir -p /data/certs/ && cp /certs/* /data/certs && chmod 600 /data/certs/*key.pem && chown 70:70 /data/certs/*"
+    command: sh -c "mkdir -p /data/certs/ && cp /certs/* /data/certs && chmod 600 /data/certs/*.key && chown 70:70 /data/certs/*"
     volumes:
       - ./certs:/certs:ro
       - pgData:/data
+  mongodb-0:
+    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    container_name: mongodb-0
+    healthcheck:
+      test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-0
+      - MONGODB_REPLICA_SET_MODE=primary
+      - MONGODB_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+      - MONGODB_REPLICA_SET_NAME=rs0
+      - MONGODB_EXTRA_FLAGS=--tlsMode=requireTLS --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+      - MONGODB_CLIENT_EXTRA_FLAGS=--tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_master_data:/bitnami/mongodb
+      - ./certs:/certs:ro
+  mongodb-1:
+    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    container_name: mongodb-1
+    healthcheck:
+      test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
+      interval: 5s
+      timeout: 20s
+      retries: 3
+    depends_on:
+      - mongodb-0
+    environment:
+      - MONGODB_ADVERTISED_HOSTNAME=mongodb-1
+      - MONGODB_REPLICA_SET_MODE=secondary
+      - MONGODB_INITIAL_PRIMARY_HOST=mongodb-0
+      - MONGODB_INITIAL_PRIMARY_ROOT_PASSWORD=password123
+      - MONGODB_REPLICA_SET_KEY=replicasetkey123
+      - MONGODB_REPLICA_SET_NAME=rs0
+      - MONGODB_EXTRA_FLAGS=--tlsMode=requireTLS --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+      - MONGODB_CLIENT_EXTRA_FLAGS=--tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem
+    ports:
+      - "27018:27017"
+    volumes:
+      - ./certs:/certs:ro
 volumes:
   data:
   datasecond:
   pgData:
+  mongodb_master_data:
+
