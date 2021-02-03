@@ -154,7 +154,7 @@ func configMongoDB() mongoConfig {
 
 	if viper.IsSet("mongo.tls") {
 		mongo.tls = viper.GetBool("mongo.tls")
-		if viper.IsSet("db.cacert") {
+		if viper.IsSet("mongo.cacert") {
 			mongo.caCert = viper.GetString("mongo.cacert")
 		}
 		if viper.IsSet("mongo.clientcert") {

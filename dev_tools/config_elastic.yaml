@@ -1,0 +1,15 @@
+encryptionKey: "./dev_tools/keys/backup.key"
+loglevel: debug
+s3:
+  url: "https://127.0.0.1"
+  port: 9000
+  accesskey: "myaccesskey"
+  secretkey: "mysecretkey"
+  bucket: "dumps"
+  cacert: "./dev_tools/certs/ca.pem"
+elastic:
+  host: "http://127.0.0.1"
+  port: 9200
+  user: "elastic"
+  password: "elastic"
+  cacert: ""

@@ -1,0 +1,16 @@
+encryptionKey: "./dev_tools/keys/backup.key"
+loglevel: debug
+s3:
+  url: "https://127.0.0.1"
+  port: 9000
+  accesskey: "myaccesskey"
+  secretkey: "mysecretkey"
+  bucket: "dumps"
+  cacert: "./dev_tools/certs/ca.pem"
+db:
+  host: "127.0.0.1"
+  user: "postgres"
+  password: "postgres"
+  database: "test"
+  cacert: "./dev_tools/certs/ca.pem"
+  sslmode: "allow"

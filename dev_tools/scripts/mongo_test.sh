@@ -28,9 +28,9 @@ done
 docker exec mongodb-0 mongo admin -u root -p password123 --host localhost:27017 $TLS --eval 'db.createUser({user: "backup", pwd: "backup", roles: [{role: "backup", db:"admin"},{role: "restore",db: "admin"}]})' || true
 
 if [ "$docker" == "docker" ]; then
-  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config.yaml" nbisweden/sda-backup:test backup-svc --action mongo_dump --name $NOW
+  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config_mongo.yaml" nbisweden/sda-backup:test backup-svc --action mongo_dump --name $NOW
 else
-  CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_dump --name "$NOW"
+  CONFIGFILE="dev_tools/config_mongo.yaml" go run . --action mongo_dump --name "$NOW"
 fi
 
 # bail early since if this fails the rest will fail also
@@ -49,9 +49,9 @@ DUMPFILE=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep "$NOW.archive" | cut 
 echo "restoring databse from file $DUMPFILE"
 
 if [ "$2" == "docker" ]; then
-  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config.yaml" nbisweden/sda-backup:test backup-svc --action mongo_restore --name "$DUMPFILE"
+  docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config_mongo.yaml" nbisweden/sda-backup:test backup-svc --action mongo_restore --name "$DUMPFILE"
 else
-  CONFIGFILE="dev_tools/config.yaml" go run . --action mongo_restore --name "$DUMPFILE"
+  CONFIGFILE="dev_tools/config_mongo.yaml" go run . --action mongo_restore --name "$DUMPFILE"
 fi
 sleep 5
 
