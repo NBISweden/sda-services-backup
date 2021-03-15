@@ -1,4 +1,4 @@
-FROM golang:1.16.0-alpine3.12
+FROM golang:1.16.2-alpine3.12
 COPY . .
 ENV GO111MODULE=on
 ENV GOPATH=$PWD
