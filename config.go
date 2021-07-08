@@ -93,6 +93,9 @@ func configElastic() elasticConfig {
 	elastic.user = viper.GetString("elastic.user")
 	elastic.password = viper.GetString("elastic.password")
 
+	if viper.IsSet("elastic.batchSize") {
+		elastic.batchSize = viper.GetInt("elastic.batchSize")
+	}
 	if viper.IsSet("elastic.cacert") {
 		elastic.caCert = viper.GetString("elastic.cacert")
 	}
