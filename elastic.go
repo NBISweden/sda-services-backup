@@ -26,12 +26,13 @@ import (
 
 // ElasticConfig is a Struct that holds ElasticSearch config
 type elasticConfig struct {
-	host      string
-	port      int
-	user      string
-	password  string
-	caCert    string
-	batchSize int
+	host       string
+	port       int
+	user       string
+	password   string
+	caCert     string
+	batchSize  int
+	filePrefix string
 }
 
 type esClient struct {
@@ -161,9 +162,14 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 	)
 
 	batchsize := 50
+	filePrefix := ""
 
 	if es.conf.batchSize != 0 {
 		batchsize = es.conf.batchSize
+	}
+
+	if es.conf.filePrefix != "" {
+		filePrefix = es.conf.filePrefix
 	}
 
 	targetIndices, err := findIndices(es, indexGlob)
@@ -175,7 +181,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 	for _, index := range targetIndices {
 		wg := sync.WaitGroup{}
-		wr, err := sb.NewFileWriter(index+".bup", &wg)
+		wr, err := sb.NewFileWriter(filePrefix+index+".bup", &wg)
 
 		if err != nil {
 			log.Fatalf("Could not open backup file for writing: %v", err)

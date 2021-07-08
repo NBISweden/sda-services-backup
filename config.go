@@ -96,6 +96,9 @@ func configElastic() elasticConfig {
 	if viper.IsSet("elastic.batchSize") {
 		elastic.batchSize = viper.GetInt("elastic.batchSize")
 	}
+	if viper.IsSet("elastic.filePrefix") {
+		elastic.filePrefix = viper.GetString("elastic.filePrefix")
+	}
 	if viper.IsSet("elastic.cacert") {
 		elastic.caCert = viper.GetString("elastic.cacert")
 	}
