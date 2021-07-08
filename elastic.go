@@ -61,7 +61,7 @@ func newElasticClient(config elasticConfig) (*esClient, error) {
 		Transport:  tr,
 	})
 
-	return &esClient{client: c}, err
+	return &esClient{client: c, conf: config}, err
 }
 
 // transportConfigES is a helper method to setup TLS for the ES client.
