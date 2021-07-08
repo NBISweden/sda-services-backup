@@ -106,7 +106,7 @@ func configElastic() elasticConfig {
 	return elastic
 }
 
-// configElastic populates a ElasticConfig
+// configPostgres populates a DBConf
 func configPostgres() DBConf {
 	pg := DBConf{}
 	pg.host = viper.GetString("db.host")
