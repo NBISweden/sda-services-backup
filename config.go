@@ -93,6 +93,12 @@ func configElastic() elasticConfig {
 	elastic.user = viper.GetString("elastic.user")
 	elastic.password = viper.GetString("elastic.password")
 
+	if viper.IsSet("elastic.batchSize") {
+		elastic.batchSize = viper.GetInt("elastic.batchSize")
+	}
+	if viper.IsSet("elastic.filePrefix") {
+		elastic.filePrefix = viper.GetString("elastic.filePrefix")
+	}
 	if viper.IsSet("elastic.cacert") {
 		elastic.caCert = viper.GetString("elastic.cacert")
 	}
@@ -100,7 +106,7 @@ func configElastic() elasticConfig {
 	return elastic
 }
 
-// configElastic populates a ElasticConfig
+// configPostgres populates a DBConf
 func configPostgres() DBConf {
 	pg := DBConf{}
 	pg.host = viper.GetString("db.host")

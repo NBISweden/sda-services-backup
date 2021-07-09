@@ -29,7 +29,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	mongo.database = database
 	dumpCommand := buildDumpCommand(mongo)
 	log.Debugln(dumpCommand)
-	
+
 	cmd := exec.Command("sh", "-c", dumpCommand)
 
 	var out bytes.Buffer
@@ -134,7 +134,7 @@ func buildRestoreCommand(mongo mongoConfig) string {
 		cmd += "'"
 	}
 	if mongo.tls {
-		cmd += fmt.Sprintf(" --ssl --sslCAFile=%s --sslPEMKeyFile=%s", mongo.caCert,mongo.clientCert)
+		cmd += fmt.Sprintf(" --ssl --sslCAFile=%s --sslPEMKeyFile=%s", mongo.caCert, mongo.clientCert)
 	}
 	cmd += " --archive"
 
@@ -151,7 +151,7 @@ func buildDumpCommand(mongo mongoConfig) string {
 	}
 
 	if mongo.tls {
-		cmd += fmt.Sprintf(" --ssl --sslCAFile=%s --sslPEMKeyFile=%s", mongo.caCert,mongo.clientCert)
+		cmd += fmt.Sprintf(" --ssl --sslCAFile=%s --sslPEMKeyFile=%s", mongo.caCert, mongo.clientCert)
 	}
 	cmd += " --archive"
 

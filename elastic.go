@@ -26,12 +26,13 @@ import (
 
 // ElasticConfig is a Struct that holds ElasticSearch config
 type elasticConfig struct {
-	host      string
-	port      int
-	user      string
-	password  string
-	caCert    string
-	batchSize int
+	host       string
+	port       int
+	user       string
+	password   string
+	caCert     string
+	batchSize  int
+	filePrefix string
 }
 
 type esClient struct {
@@ -61,7 +62,7 @@ func newElasticClient(config elasticConfig) (*esClient, error) {
 		Transport:  tr,
 	})
 
-	return &esClient{client: c}, err
+	return &esClient{client: c, conf: config}, err
 }
 
 // transportConfigES is a helper method to setup TLS for the ES client.
@@ -161,9 +162,14 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 	)
 
 	batchsize := 50
+	filePrefix := ""
 
 	if es.conf.batchSize != 0 {
 		batchsize = es.conf.batchSize
+	}
+
+	if es.conf.filePrefix != "" {
+		filePrefix = es.conf.filePrefix
 	}
 
 	targetIndices, err := findIndices(es, indexGlob)
@@ -175,7 +181,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 	for _, index := range targetIndices {
 		wg := sync.WaitGroup{}
-		wr, err := sb.NewFileWriter(index+".bup", &wg)
+		wr, err := sb.NewFileWriter(filePrefix+index+".bup", &wg)
 
 		if err != nil {
 			log.Fatalf("Could not open backup file for writing: %v", err)
@@ -226,10 +232,10 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			return err
 		}
 
-		log.Info("Batch   ", batchNum)
-		log.Debug("ScrollID", scrollID)
-		log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
-		log.Debug(strings.Repeat("-", 80))
+		log.Debug("Batch   ", batchNum)
+		log.Trace("ScrollID", scrollID)
+		log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
+		log.Trace(strings.Repeat("-", 80))
 
 		scrollID = gjson.Get(json, "_scroll_id").String()
 
@@ -252,10 +258,10 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			scrollID = gjson.Get(json, "_scroll_id").String()
 
 			hits := gjson.Get(json, "hits.hits")
-			log.Debug(hits)
+			log.Trace(hits)
 
 			if len(hits.Array()) < 1 {
-				log.Infoln("Finished scrolling")
+				log.Traceln("Finished scrolling")
 				break
 			} else {
 				_, err = c.Write([]byte(hits.Raw + "\n"))
@@ -263,10 +269,10 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 					log.Errorf("Could not encrypt/write: %s", err)
 					return err
 				}
-				log.Info("Batch   ", batchNum)
-				log.Debug("ScrollID", scrollID)
-				log.Debug("IDs     ", gjson.Get(hits.Raw, "#._id"))
-				log.Debug(strings.Repeat("-", 80))
+				log.Debug("Batch   ", batchNum)
+				log.Trace("ScrollID", scrollID)
+				log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
+				log.Trace(strings.Repeat("-", 80))
 			}
 		}
 		c.Close()
@@ -331,7 +337,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 
 	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
-			log.Info("End of blob reached")
+			log.Debug("End of blob reached")
 			break
 		}
 		i := 0

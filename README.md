@@ -97,11 +97,13 @@ s3:
   bucket: "bucket-name"
   #cacert: "path/to/ca-root"
 elastic:
-  host: "FQDN URI" #https://es.example.com
-  #port: 9200 #only neede if the port difers from the standard HTTP/HTTPS ports
+  host: "FQDN URI" # https://es.example.com
+  #port: 9200 # only needed if the port difers from the standard HTTP/HTTPS ports
   user: "elastic-user"
   password: "elastic-password"
   #cacert: "path/to/ca-root"
+  batchSize: 50 # How many documents to retrieve from elastic search at a time, default 50 (should probably be at least 2000
+  filePrefix: "" # Can be emtpy string, useful in case an index has been written to and you want to backup a new copy
 db:
   host: "hostname or IP" #pg.example.com, 127.0.0.1
   #port: 5432 #only needed if the postgresql databse listens to a different port
