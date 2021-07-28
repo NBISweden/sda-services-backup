@@ -1,29 +1,24 @@
 version: 2
 updates:
-  - package-ecosystem: "gomod"
-    directory: "./"
-    # Check the npm registry for updates every day (weekdays)
+  - package-ecosystem: gomod
+    directory: ./
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
     reviewers:
-      - "dbampalikis"
-      - "jbygdell"
-      - "norling"
-
-  - package-ecosystem: "docker"
-    # Look for a `Dockerfile` in the `root` directory
-    directory: "./"
-    # Check for updates once a week
+      - dbampalikis
+      - jbygdell
+      - norling
+  - package-ecosystem: docker
+    directory: ./
     schedule:
-      interval: "weekly"
-
-- package-ecosystem: "github-actions"
-    directory: "/"
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
     schedule:
-      interval: "weekly"
+      interval: weekly
     open-pull-requests-limit: 10
     reviewers:
-      - "dbampalikis"
-      - "jbygdell"
-      - "norling"
+      - dbampalikis
+      - jbygdell
+      - norling
