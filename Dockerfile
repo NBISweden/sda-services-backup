@@ -7,7 +7,7 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 RUN go build -ldflags "-extldflags -static" -o backup-svc .
 
-FROM alpine:3.14.2
+FROM alpine:3.14.3
 RUN apk add --no-cache postgresql-client mongodb-tools
 COPY --from=0 go/backup-svc /usr/local/bin/
 USER 65534
