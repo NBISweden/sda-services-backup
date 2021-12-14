@@ -55,8 +55,8 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}:${{ needs.tag.outputs.tag }}
-            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository_owner }}/sda-services-backup:${{ needs.tag.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/sda-services-backup:latest
           labels: |
             org.opencontainers.image.source=${{ github.event.repository.clone_url }}
             org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
