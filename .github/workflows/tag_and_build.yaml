@@ -1,7 +1,7 @@
 name: Bump version
 on:
   push:
-    branches:
+    branches-ignore:
       - master
 jobs:
   tag:
@@ -49,6 +49,7 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.tag.outputs.tag }}
+            latest=auto
             type=sha
       
       - name: Build and push
