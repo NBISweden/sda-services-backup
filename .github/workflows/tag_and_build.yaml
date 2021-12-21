@@ -48,10 +48,9 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=sha
             type=semver,pattern={{raw}},value=${{ needs.tag.outputs.tag }}
-            type=semver,pattern={{version}},value=${{ needs.tag.outputs.tag }}
-          flavor: latest=auto
+            type=sha
+          flavor: latest=true
       
       - name: Build and push
         uses: docker/build-push-action@v2
