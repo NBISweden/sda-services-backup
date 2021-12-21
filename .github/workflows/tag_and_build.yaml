@@ -2,7 +2,7 @@ name: Bump version
 on:
   push:
     branches:
-    - master
+    - ! master
 jobs:
   tag:
     name: bump tags
@@ -47,17 +47,15 @@ jobs:
         uses: docker/metadata-action@v3
         with:
           images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=raw,value=${{ needs.tag.outputs.tag }}
+            type=sha
       
       - name: Build and push
         uses: docker/build-push-action@v2
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/sda-services-backup:${{ needs.tag.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/sda-services-backup:latest
-          labels: |
-            org.opencontainers.image.source=${{ github.event.repository.clone_url }}
-            org.opencontainers.image.created=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-            org.opencontainers.image.revision=${{ github.sha }}
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
