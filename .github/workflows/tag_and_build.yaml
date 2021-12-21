@@ -49,8 +49,9 @@ jobs:
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=${{ needs.tag.outputs.tag }}
-            type=semver,pattern={{raw}},value=${{ needs.tag.outputs.tag }}
             type=sha
+            type=semver,pattern={{raw}},value=${{ needs.tag.outputs.tag }}
+            type=semver,pattern={{version}},value=${{ needs.tag.outputs.tag }}
           flavor: latest=true
       
       - name: Build and push
