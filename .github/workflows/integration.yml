@@ -28,6 +28,9 @@ jobs:
     - name: install s3cmd
       run: pip3 install s3cmd
 
+    - name: create certificates
+      run: bash ./dev_tools/scripts/make_certs.sh
+
     - name: Start virtual infrastructure
       run: docker-compose -f ./dev_tools/docker-compose.yml up -d --force-recreate --build
 
