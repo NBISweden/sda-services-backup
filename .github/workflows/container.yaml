@@ -31,6 +31,8 @@ jobs:
     - name: Build backup-svc container
       run: docker build -t nbisweden/sda-backup:test .
 
+    - name: create certificates
+      run: bash ./dev_tools/scripts/make_certs.sh
 
     - name: Start virtual infrastructure
       run: docker-compose -f ./dev_tools/docker-compose.yml up -d --force-recreate
