@@ -1,0 +1,19 @@
+FROM golang:1.16-alpine
+
+WORKDIR /source
+
+COPY go.mod ./
+COPY go.sum ./
+
+RUN go mod download
+
+COPY *.go ./
+RUN CGO_ENABLED=0 go build -o /bin/sda-backup
+
+FROM postgres:13-alpine
+ENV POSTGRES_PASSWORD random-pw
+COPY dev_tools/config_postgres.yaml ./
+COPY dev_tools/certs ./dev_tools/certs
+COPY dev_tools/keys ./dev_tools/keys
+COPY --from=0 /bin/sda-backup /bin/sda-backup
+ENV CONFIGFILE="../config_postgres.yaml"
