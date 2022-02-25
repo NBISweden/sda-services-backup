@@ -25,6 +25,72 @@ type DBConf struct {
 	clientKey  string
 }
 
+func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
+	today := time.Now().Format("20060102150405")
+	destDir := "db-backup"
+	dbURI := buildConnInfo(db)
+	cmd := exec.Command("pg_basebackup", dbURI, "-F", "p", "-D", destDir)
+
+	var out bytes.Buffer
+	cmd.Stdout = &out
+
+	var errMsg bytes.Buffer
+	cmd.Stderr = &errMsg
+
+	err := cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	cmd = exec.Command("pg_verifybackup", destDir)
+
+	cmd.Stdout = &out
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	cmd = exec.Command("tar", "-cvf", destDir+".tar", destDir)
+
+	cmd.Stdout = &out
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	fileName := today + "-" + db.database + ".tar"
+	wg := sync.WaitGroup{}
+	destFileName, err := sb.NewFileWriter(fileName, &wg)
+	if err != nil {
+		log.Errorf("Could not open backup file for writing: %v", err)
+		return err
+	}
+	sourceFileName := destDir + ".tar"
+	data, err := ioutil.ReadFile(sourceFileName)
+	if err != nil {
+		log.Errorf("Error in reading source data: %v", err)
+	}
+	_, err = destFileName.Write(data)
+	if err != nil {
+		log.Errorf("Error in writer: %v", err)
+	}
+
+	err = destFileName.Close()
+	if err != nil {
+		log.Errorf("Could not close destination file: %v", err)
+	}
+	wg.Wait()
+
+	return nil
+}
+
 func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	today := time.Now().Format("20060102150405")
 	dbURI := buildConnInfo(db)
