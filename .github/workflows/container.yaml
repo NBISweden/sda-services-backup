@@ -21,7 +21,7 @@ jobs:
       run: pip3 install s3cmd
 
     - name: Check out
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
 
     - name: Set up Go
       uses: actions/setup-go@v2
