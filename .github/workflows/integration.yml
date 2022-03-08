@@ -18,7 +18,7 @@ jobs:
         python-version: '3.6'
 
     - name: Check out
-      uses: actions/checkout@v1
+      uses: actions/checkout@v3
 
     - name: Set up Go
       uses: actions/setup-go@v2
