@@ -3,13 +3,16 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 )
 
 // DBConf stores information about the database backend
@@ -137,6 +140,48 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	c.Close()
 	wr.Close()
 	wg.Wait()
+
+	return nil
+}
+
+func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) error {
+	new, err := os.Create("/home/backup.tar")
+	if err != nil {
+		log.Errorf("Error in creating file: %v", err)
+	}
+
+	fr, err := sb.NewFileReader(backupTar)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer fr.Close()
+
+	_, err = io.Copy(new, fr)
+	if err != nil {
+		log.Errorf("Error in copying file: %v", err)
+		return err
+	}
+
+	cmd := exec.Command("tar", "-xvf", "/home/backup.tar", "--directory", "/home/")
+	var errMsg bytes.Buffer
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	uID := viper.GetString("uid")
+	cmd = exec.Command("chown", "-R", uID, "/home")
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
 
 	return nil
 }

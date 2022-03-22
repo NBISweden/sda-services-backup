@@ -70,5 +70,10 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	case "pg_bb-restore":
+		err := pg.baseBackupRestore(*sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
