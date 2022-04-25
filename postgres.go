@@ -71,7 +71,14 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 		return err
 	}
 
-	c, err := newCompressor(wr)
+	key := getKey(keyPath)
+	e, err := newEncryptor(key, wr)
+	if err != nil {
+		log.Errorf("Could not initialize encryptor: (%v)", err)
+		return err
+	}
+
+	c, err := newCompressor(e)
 	if err != nil {
 		log.Errorf("Could not initialize compressor: (%v)", err)
 		return err
@@ -164,7 +171,14 @@ func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) erro
 	}
 	defer fr.Close()
 
-	d, err := newDecompressor(fr)
+	key := getKey(keyPath)
+	r, err := newDecryptor(key, fr)
+	if err != nil {
+		log.Error("Could not initialise decryptor", err)
+		return err
+	}
+
+	d, err := newDecompressor(r)
 	if err != nil {
 		log.Errorf("Could not initialise decompressor: %v", err)
 		return err
