@@ -58,7 +58,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 		return err
 	}
 
-	c, err := newCompressor(key, e)
+	c, err := newCompressor(e)
 	if err != nil {
 		log.Errorf("Could not initialize compressor: (%v)", err)
 		return err
@@ -92,7 +92,7 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 		log.Error("Could not initialise decryptor", err)
 		return err
 	}
-	d, err := newDecompressor(key, r)
+	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
 		return err
