@@ -34,9 +34,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	dbURI := buildConnInfo(db)
 	cmd := exec.Command("pg_basebackup", dbURI, "-F", "p", "-D", destDir)
 
-	var out bytes.Buffer
-	cmd.Stdout = &out
-
 	var errMsg bytes.Buffer
 	cmd.Stderr = &errMsg
 
@@ -48,7 +45,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	cmd = exec.Command("pg_verifybackup", destDir)
 
-	cmd.Stdout = &out
 	cmd.Stderr = &errMsg
 
 	err = cmd.Run()
@@ -59,7 +55,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	cmd = exec.Command("tar", "-cvf", destDir+".tar", destDir)
 
-	cmd.Stdout = &out
 	cmd.Stderr = &errMsg
 
 	err = cmd.Run()
@@ -70,22 +65,34 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	fileName := today + "-" + db.database + ".tar"
 	wg := sync.WaitGroup{}
-	destFileName, err := sb.NewFileWriter(fileName, &wg)
+	wr, err := sb.NewFileWriter(fileName, &wg)
 	if err != nil {
 		log.Errorf("Could not open backup file for writing: %v", err)
 		return err
 	}
+
+	c, err := newCompressor(wr)
+	if err != nil {
+		log.Errorf("Could not initialize compressor: (%v)", err)
+		return err
+	}
+
 	sourceFileName := destDir + ".tar"
 	data, err := ioutil.ReadFile(sourceFileName)
 	if err != nil {
 		log.Errorf("Error in reading source data: %v", err)
 	}
-	_, err = destFileName.Write(data)
+	_, err = c.Write(data)
 	if err != nil {
 		log.Errorf("Error in writer: %v", err)
 	}
 
-	err = destFileName.Close()
+	err = c.Close()
+	if err != nil {
+		log.Errorf("Could not close compressor: %v", err)
+	}
+
+	err = wr.Close()
 	if err != nil {
 		log.Errorf("Could not close destination file: %v", err)
 	}
@@ -145,7 +152,7 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 }
 
 func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) error {
-	new, err := os.Create("/home/backup.tar")
+	localTar, err := os.Create("/home/backup.tar")
 	if err != nil {
 		log.Errorf("Error in creating file: %v", err)
 	}
@@ -157,7 +164,14 @@ func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) erro
 	}
 	defer fr.Close()
 
-	_, err = io.Copy(new, fr)
+	d, err := newDecompressor(fr)
+	if err != nil {
+		log.Errorf("Could not initialise decompressor: %v", err)
+		return err
+
+	}
+
+	_, err = io.Copy(localTar, d)
 	if err != nil {
 		log.Errorf("Error in copying file: %v", err)
 		return err
@@ -181,6 +195,11 @@ func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) erro
 	if err != nil {
 		log.Errorf(errMsg.String())
 		return err
+	}
+
+	err = d.Close()
+	if err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
 	}
 
 	return nil
