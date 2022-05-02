@@ -11,7 +11,7 @@ go build -ldflags "-extldflags -static" -o backup-svc .
 The specific config file to be used can be set via the environmental variable `CONFIGFILE`,
 which holds the full path to the config file.
 
-All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.  
+All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.
 ENVs will overrule values set in the config file
 
 For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
@@ -52,18 +52,41 @@ s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 
 ### Backing up a database
 
+#### Dump
+
 * backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.sqldump`
 
 ```cmd
 ./backup-svc --action pg_dump
 ```
 
+#### Pg_basebackup
+
+* backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.tar`
+
+```cmd
+docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_basebackup
+```
+
 ### Restoring up a database
+
+#### Restare dump file
 
 * The target database must exist when restoring the data.
 
 ```cmd
 ./backup-svc --action pg_restore --name PG-DUMP-FILE
+```
+
+#### Restore from physical copy
+
+* The target database must exist when restoring the data.
+
+* The postgres data will be stored locally and during the redeployment postgres db must point to the folder `tmp/db-backup`
+
+
+```cmd
+docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_bb-restore --name TAR-FILE
 ```
 
 ## MongoDB
