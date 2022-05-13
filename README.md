@@ -70,7 +70,7 @@ docker container run --rm -i --name pg-backup --network=host $(docker build -f d
 
 ### Restoring up a database
 
-#### Restare dump file
+#### Restore dump file
 
 * The target database must exist when restoring the data.
 
