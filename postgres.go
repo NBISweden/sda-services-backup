@@ -28,6 +28,13 @@ type DBConf struct {
 	clientKey  string
 }
 
+// Basebackup function:
+// - gets an identical copy of the pg database (pg_data)
+// - verifies the backup
+// - tars the copy
+// - gets the key and encrypts the tar file
+// - compresses the encrypted file
+// - puts the encrypted and compressed file in S3
 func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	today := time.Now().Format("20060102150405")
 	destDir := "db-backup"
@@ -158,6 +165,11 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	return nil
 }
 
+// Basebackuprestore function:
+// - gets the key to decrypt the pg_data
+// - decrypts and decompress the data
+// - untar the data
+// - puts the db copy in the running container
 func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) error {
 	localTar, err := os.Create("/home/backup.tar")
 	if err != nil {
