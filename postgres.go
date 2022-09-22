@@ -32,8 +32,8 @@ type DBConf struct {
 // - gets an identical copy of the pg database (pg_data)
 // - verifies the backup
 // - tars the copy
-// - gets the key and encrypts the tar file
 // - compresses the encrypted file
+// - gets the key and encrypts the tar file
 // - puts the encrypted and compressed file in S3
 func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	today := time.Now().Format("20060102150405")
