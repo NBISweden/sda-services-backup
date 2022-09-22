@@ -9,7 +9,7 @@ docker container run --rm -i --name pg-backup --network=host $(docker build --bu
 # Find the name of the copy in the S3
 DBCOPY=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep ".tar" | cut -d '/' -f4)
 
-# Checks if the backup image exists locally from the previou step, if not creates the image
+# Checks if the backup image exists locally from the previous step, if not creates the image
 # Then gets the physical copy of the database from the S3
 IMAGENAME=$(docker images -q backup)
 NAMELENGTH=`echo -n "$IMAGENAME" | wc -m`
