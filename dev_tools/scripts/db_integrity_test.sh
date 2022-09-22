@@ -36,7 +36,7 @@ do
     fi
 done;
 
-# Find the user in tha db
+# Find the user in the db
 USER=$(docker exec db psql -U postgres -d test -tA -c "select submission_user from local_ega.main where submission_file_path = 'test.c4gh';")
 
 # Check if the user is the expected one
