@@ -68,6 +68,11 @@ s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_basebackup
 ```
 
+**NOTE**
+
+This type of backup runs through a docker container because of some compatibility issues
+that might appear between the PostgreSQL 13 running in the `db` container and the local one.
+
 ### Restoring up a database
 
 #### Restore dump file
@@ -88,6 +93,10 @@ docker container run --rm -i --name pg-backup --network=host $(docker build -f d
 ```cmd
 docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_bb-restore --name TAR-FILE
 ```
+
+**NOTE**
+
+Again here a docker container is used for the same reason explained in the `Pg_basebackup` section.
 
 ## MongoDB
 

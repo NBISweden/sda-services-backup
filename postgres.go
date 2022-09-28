@@ -213,6 +213,7 @@ func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) erro
 		return err
 	}
 
+	// Change folder owner in order to have access to the folder locally
 	uID := viper.GetString("uid")
 	cmd = exec.Command("chown", "-R", uID, "/home")
 	cmd.Stderr = &errMsg
