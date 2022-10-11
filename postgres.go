@@ -165,12 +165,12 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	return nil
 }
 
-// Basebackuprestore function:
+// BasebackupUnpack function:
 // - gets the key to decrypt the pg_data
 // - decrypts and decompress the data
 // - untar the data
 // - puts the db copy in the running container
-func (db DBConf) baseBackupRestore(sb s3Backend, keyPath, backupTar string) error {
+func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error {
 	localTar, err := os.Create("/home/backup.tar")
 	if err != nil {
 		log.Errorf("Error in creating file: %v", err)

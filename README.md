@@ -91,7 +91,7 @@ that might appear between the PostgreSQL 13 running in the `db` container and th
 
 
 ```cmd
-docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_bb-restore --name TAR-FILE
+docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_db-unpack --name TAR-FILE
 ```
 
 **NOTE**
