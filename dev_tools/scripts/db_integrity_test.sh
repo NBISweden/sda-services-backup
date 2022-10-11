@@ -18,10 +18,10 @@ NAMELENGTH=`echo -n "$IMAGENAME" | wc -m`
 if [ $NAMELENGTH = 0 ] || [ $DBCOPYLENGTH = 0 ]; then
     echo "the image or the db copy is missing"
     exit 1
-# Get the db copy from S3
-else
-    docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host backup /bin/sda-backup --action pg_db-unpack --name "$DBCOPY"
 fi
+
+# Get the db copy from S3
+docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host backup /bin/sda-backup --action pg_db-unpack --name "$DBCOPY"
 
 # Drop the database to make sure that the test entry is not there anymore
 docker exec db psql -U postgres -d postgres -c "DROP DATABASE test;"
