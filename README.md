@@ -65,7 +65,7 @@ s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 * backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.tar`
 
 ```cmd
-docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_basebackup
+docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_basebackup
 ```
 
 **NOTE**
@@ -85,14 +85,23 @@ that might appear between the PostgreSQL 13 running in the `db` container and th
 
 #### Restore from physical copy
 
-* The target database must exist when restoring the data.
+This is done in more stages.
 
-* The postgres data will be stored locally and during the redeployment postgres db must point to the folder `tmp/db-backup`
+* The target database must be stopped before restoring it.
 
+* Create a docker volume for the physical copy.
 
+* Get the physical copy form the S3 and unpack it in the docker volume which has been created in the previous step
 ```cmd
-docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q .) /bin/sda-backup --action pg_db-unpack --name TAR-FILE
+docker container run --rm -i --name pg-backup --network=host -v <docker-volume>:/home $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_db-unpack --name TAR-FILE
 ```
+
+* Copy the backup from the its docker volume to the pgdata of the database's docker volume
+```cmd
+docker run --rm -v <docker-volume>:/pg-backup -v <database-docker-volume>:/pg-data alpine cp -r /pg-backup/db-backup/ /pg-data/<target-pgdata>/
+```
+
+* Start the database container.
 
 **NOTE**
 
