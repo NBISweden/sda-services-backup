@@ -4,7 +4,7 @@
 docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submission_file_path,submission_user,submission_file_extension,status,encryption_method) VALUES('test.c4gh','dummy','c4gh','INIT','CRYPT4GH');"
 
 # Build, run and execute the pg_basebackup action
-docker container run --rm -i --name pg-backup --network=host $(docker build --build-arg USER_ID=$(id -u) -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_basebackup
+docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_basebackup
 
 # Find the name of the copy in the S3 and check the length
 DBCOPY=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep ".tar" | cut -d '/' -f4)
@@ -21,33 +21,42 @@ if [ $NAMELENGTH = 0 ] || [ $DBCOPYLENGTH = 0 ]; then
 fi
 
 # Get the db copy from S3
-docker container run -v $(pwd)/tmp:/home --rm -i --name pg-backup --network=host backup /bin/sda-backup --action pg_db-unpack --name "$DBCOPY"
+docker volume create restore
+docker container run --rm -i --name pg-backup --network=host -v restore:/home backup /bin/sda-backup --action pg_db-unpack --name "$DBCOPY"
 
-# Drop the database to make sure that the test entry is not there anymore
-docker exec db psql -U postgres -d postgres -c "DROP DATABASE test;"
+# Remove everything from the db
+docker exec -i db /bin/sh -c "rm -r data/pgdata"
 
-# Check that the database is not there anymore
-USER=$(docker exec db psql -U postgres -d test -tA -c "select submission_user from local_ega.main where submission_file_path = 'test.c4gh';") > /dev/null 2>&1
+# Check that the pgdata are not there anymore
+USER=$(docker exec db psql -U postgres -d skata -tA -c "select submission_user from local_ega.main where submission_file_path = 'test.c4gh';") 2>/dev/null
 if [ "$USER" = "dummy" ]; then
     echo "Failed to drop database"
     exit 1
 fi
 
-# Remove everything from the db
-docker exec -i db /bin/sh -c "rm -r data/pgdata"
+# Stop the running db
+docker stop db
 
 # Add the physical copy in the db container
-docker cp tmp/db-backup/ db:data/pgdata
+docker run --rm -v restore:/pg-backup -v dev_tools_pgData:/pg-data alpine cp -r /pg-backup/db-backup/ /pg-data/pgdata/
 
-# Check when the container restarts
-docker events --filter 'container=db'  | while read event
+# start the DB container
+docker start db
+
+# Wait until the DB container is healthy
+RETRY_TIMES=0
+until [ $(docker inspect --format "{{json .State.Health.Status }}" db) = "\"healthy\"" ]
 do
-    check_event=$(echo $event | awk '{print $3}')
-    if [ "$check_event" = "start" ]; then
-        echo "container restarted"
-        break
-    fi
-done;
+  echo "Waiting for container to become ready"
+  docker logs db | grep -i  "ERROR"
+  RETRY_TIMES=$((RETRY_TIMES+1));
+  echo $RETRY_TIMES
+  if [ $RETRY_TIMES -eq 30 ]; then
+    exit 1;
+  fi
+  sleep 10;
+done
+echo "Finished waiting for container"
 
 # Find the user in the db
 USER=$(docker exec db psql -U postgres -d test -tA -c "select submission_user from local_ega.main where submission_file_path = 'test.c4gh';")
@@ -59,4 +68,4 @@ if [ "$USER" != "dummy" ]; then
 fi
 
 # Remove the local folder
-rm -r tmp
+docker volume rm restore
