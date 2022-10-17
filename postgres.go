@@ -12,7 +12,6 @@ import (
 
 	_ "github.com/lib/pq"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/viper"
 )
 
 // DBConf stores information about the database backend
@@ -205,17 +204,6 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	cmd := exec.Command("tar", "-xvf", "/home/backup.tar", "--directory", "/home/")
 	var errMsg bytes.Buffer
-	cmd.Stderr = &errMsg
-
-	err = cmd.Run()
-	if err != nil {
-		log.Errorf(errMsg.String())
-		return err
-	}
-
-	// Change folder owner in order to have access to the folder locally
-	uID := viper.GetString("uid")
-	cmd = exec.Command("chown", "-R", uID, "/home")
 	cmd.Stderr = &errMsg
 
 	err = cmd.Run()
