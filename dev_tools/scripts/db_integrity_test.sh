@@ -7,7 +7,7 @@ docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submissio
 docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_basebackup
 
 # Find the name of the copy in the S3 and check the length
-DBCOPY=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep ".tar" | cut -d '/' -f4)
+DBCOPY=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep ".enc" | cut -d '/' -f4)
 DBCOPYLENGTH=`echo -n "$DBCOPY" | wc -m`
 
 # Find the name of the backup image created in the previous step and check the length
