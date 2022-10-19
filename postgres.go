@@ -69,7 +69,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 		return err
 	}
 
-	fileName := today + "-" + db.database + ".tar"
+	fileName := today + "-" + db.database + ".enc"
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(fileName, &wg)
 	if err != nil {
