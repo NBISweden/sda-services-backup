@@ -27,8 +27,8 @@ docker container run --rm -i --name pg-backup --network=host -v restore:/home ba
 # Stop the running db
 docker stop db
 
-# Add the physical copy in the db container
-docker run --rm -v restore:/pg-backup -v dev_tools_pgData:/pg-data alpine /bin/sh -c "rm -r data/pgdata && cp -r /pg-backup/db-backup/ /pg-data/pgdata/"
+# Delete pgdata and add the physical copy in the db container
+docker run --rm -v restore:/pg-backup -v dev_tools_pgData:/pg-data alpine /bin/sh -c "rm -r pg-data/pgdata && cp -r /pg-backup/db-backup/ /pg-data/pgdata/"
 
 # start the DB container
 docker start db
