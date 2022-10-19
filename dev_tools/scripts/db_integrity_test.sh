@@ -57,5 +57,15 @@ if [ "$USER" != "dummy" ]; then
     exit 1
 fi
 
+# Insert new test data and check if the database is writable
+docker exec db psql -U postgres -d test -c "INSERT INTO local_ega.main(submission_file_path,submission_user,submission_file_extension,status,encryption_method) VALUES('new-test.c4gh','new-dummy','c4gh','INIT','CRYPT4GH');"
+
+USER=$(docker exec db psql -U postgres -d test -tA -c "select submission_user from local_ega.main where submission_file_path = 'new-test.c4gh';")
+
+if [ "$USER" != "new-dummy" ]; then
+    echo "Expected to get user 'dummy' but got '$USER'"
+    exit 1
+fi
+
 # Remove the local folder
 docker volume rm restore
