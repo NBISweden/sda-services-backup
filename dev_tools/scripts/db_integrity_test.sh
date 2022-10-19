@@ -48,10 +48,10 @@ RETRY_TIMES=0
 until [ $(docker inspect --format "{{json .State.Health.Status }}" db) = "\"healthy\"" ]
 do
   echo "Waiting for container to become ready"
-  docker logs db | grep -i  "ERROR"
   RETRY_TIMES=$((RETRY_TIMES+1));
   echo $RETRY_TIMES
   if [ $RETRY_TIMES -eq 30 ]; then
+    docker logs db | grep -i  "ERROR"
     exit 1;
   fi
   sleep 10;
