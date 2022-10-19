@@ -24,21 +24,11 @@ fi
 docker volume create restore
 docker container run --rm -i --name pg-backup --network=host -v restore:/home backup /bin/sda-backup --action pg_db-unpack --name "$DBCOPY"
 
-# Remove everything from the db
-docker exec -i db /bin/sh -c "rm -r data/pgdata"
-
-# Check that the pgdata are not there anymore
-USER=$(docker exec db psql -U postgres -d skata -tA -c "select submission_user from local_ega.main where submission_file_path = 'test.c4gh';") 2>/dev/null
-if [ "$USER" = "dummy" ]; then
-    echo "Failed to drop database"
-    exit 1
-fi
-
 # Stop the running db
 docker stop db
 
 # Add the physical copy in the db container
-docker run --rm -v restore:/pg-backup -v dev_tools_pgData:/pg-data alpine cp -r /pg-backup/db-backup/ /pg-data/pgdata/
+docker run --rm -v restore:/pg-backup -v dev_tools_pgData:/pg-data alpine /bin/sh -c "rm -r data/pgdata && cp -r /pg-backup/db-backup/ /pg-data/pgdata/"
 
 # start the DB container
 docker start db
