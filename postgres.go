@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -23,6 +25,93 @@ type DBConf struct {
 	sslMode    string
 	clientCert string
 	clientKey  string
+}
+
+// Basebackup function:
+// - gets an identical copy of the pg database (pg_data)
+// - verifies the backup
+// - tars the copy
+// - compresses the encrypted file
+// - gets the key and encrypts the tar file
+// - puts the encrypted and compressed file in S3
+func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
+	today := time.Now().Format("20060102150405")
+	destDir := "db-backup"
+	dbURI := buildConnInfo(db)
+	cmd := exec.Command("pg_basebackup", dbURI, "-F", "p", "-D", destDir)
+
+	var errMsg bytes.Buffer
+	cmd.Stderr = &errMsg
+
+	err := cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	cmd = exec.Command("pg_verifybackup", destDir)
+
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	cmd = exec.Command("tar", "-cvf", destDir+".tar", destDir)
+
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	fileName := today + "-" + db.database + ".enc"
+	wg := sync.WaitGroup{}
+	wr, err := sb.NewFileWriter(fileName, &wg)
+	if err != nil {
+		log.Errorf("Could not open backup file for writing: %v", err)
+		return err
+	}
+
+	key := getKey(keyPath)
+	e, err := newEncryptor(key, wr)
+	if err != nil {
+		log.Errorf("Could not initialize encryptor: (%v)", err)
+		return err
+	}
+
+	c, err := newCompressor(e)
+	if err != nil {
+		log.Errorf("Could not initialize compressor: (%v)", err)
+		return err
+	}
+
+	sourceFileName := destDir + ".tar"
+	data, err := ioutil.ReadFile(sourceFileName)
+	if err != nil {
+		log.Errorf("Error in reading source data: %v", err)
+	}
+	_, err = c.Write(data)
+	if err != nil {
+		log.Errorf("Error in writer: %v", err)
+	}
+
+	err = c.Close()
+	if err != nil {
+		log.Errorf("Could not close compressor: %v", err)
+	}
+
+	err = wr.Close()
+	if err != nil {
+		log.Errorf("Could not close destination file: %v", err)
+	}
+	wg.Wait()
+
+	return nil
 }
 
 func (db DBConf) dump(sb s3Backend, keyPath string) error {
@@ -56,7 +145,7 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 		return err
 	}
 
-	c, err := newCompressor(key, e)
+	c, err := newCompressor(e)
 	if err != nil {
 		log.Errorf("Could not initialize compressor: (%v)", err)
 		return err
@@ -71,6 +160,62 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	c.Close()
 	wr.Close()
 	wg.Wait()
+
+	return nil
+}
+
+// BasebackupUnpack function:
+// - gets the key to decrypt the pg_data
+// - decrypts and decompress the data
+// - untar the data
+// - puts the db copy in the running container
+func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error {
+	localTar, err := os.Create("/home/backup.tar")
+	if err != nil {
+		log.Errorf("Error in creating file: %v", err)
+	}
+
+	fr, err := sb.NewFileReader(backupTar)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	defer fr.Close()
+
+	key := getKey(keyPath)
+	r, err := newDecryptor(key, fr)
+	if err != nil {
+		log.Error("Could not initialise decryptor", err)
+		return err
+	}
+
+	d, err := newDecompressor(r)
+	if err != nil {
+		log.Errorf("Could not initialise decompressor: %v", err)
+		return err
+
+	}
+
+	_, err = io.Copy(localTar, d)
+	if err != nil {
+		log.Errorf("Error in copying file: %v", err)
+		return err
+	}
+
+	cmd := exec.Command("tar", "-xvf", "/home/backup.tar", "--directory", "/home/")
+	var errMsg bytes.Buffer
+	cmd.Stderr = &errMsg
+
+	err = cmd.Run()
+	if err != nil {
+		log.Errorf(errMsg.String())
+		return err
+	}
+
+	err = d.Close()
+	if err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
+	}
 
 	return nil
 }
@@ -90,7 +235,7 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 		log.Error("Could not initialise decryptor", err)
 		return err
 	}
-	d, err := newDecompressor(key, r)
+	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
 		return err

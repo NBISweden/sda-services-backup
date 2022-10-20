@@ -65,5 +65,15 @@ func main() {
 		if err != nil {
 			log.Fatal(err)
 		}
+	case "pg_basebackup":
+		err := pg.basebackup(*sb, conf.keyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "pg_db-unpack":
+		err := pg.baseBackupUnpack(*sb, conf.keyPath, flags.name)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }

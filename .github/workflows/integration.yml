@@ -6,7 +6,7 @@ jobs:
   build:
     strategy:
       matrix:
-        test: [db_test, es_test, mongo_test]
+        test: [db_test, es_test, mongo_test, db_integrity_test]
 
     runs-on: ubuntu-latest
 

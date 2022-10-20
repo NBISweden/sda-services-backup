@@ -7,7 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-func newCompressor(key []byte, w io.Writer) (io.WriteCloser, error) {
+func newCompressor(w io.Writer) (io.WriteCloser, error) {
 
 	zw := zlib.NewWriter(w)
 	_, err := zlib.NewWriterLevel(zw, zlib.BestCompression)
@@ -19,7 +19,7 @@ func newCompressor(key []byte, w io.Writer) (io.WriteCloser, error) {
 	return zw, nil
 }
 
-func newDecompressor(key []byte, r io.Reader) (io.ReadCloser, error) {
+func newDecompressor(r io.Reader) (io.ReadCloser, error) {
 
 	zr, err := zlib.NewReader(r)
 	if err != nil {

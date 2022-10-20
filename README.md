@@ -11,7 +11,7 @@ go build -ldflags "-extldflags -static" -o backup-svc .
 The specific config file to be used can be set via the environmental variable `CONFIGFILE`,
 which holds the full path to the config file.
 
-All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.  
+All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.
 ENVs will overrule values set in the config file
 
 For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
@@ -52,19 +52,60 @@ s3cmd -c PATH_TO_S3CONF_FILE ls s3://BUCKET-NAME/*INDEX-NAME
 
 ### Backing up a database
 
+#### Dump
+
 * backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.sqldump`
 
 ```cmd
 ./backup-svc --action pg_dump
 ```
 
+#### Pg_basebackup
+
+* backup will be stored in S3 in the format of `YYYYMMDDhhmmss-DBNAME.tar`
+
+```cmd
+docker container run --rm -i --name pg-backup --network=host $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_basebackup
+```
+
+**NOTE**
+
+This type of backup runs through a docker container because of some compatibility issues
+that might appear between the PostgreSQL 13 running in the `db` container and the local one.
+
 ### Restoring up a database
+
+#### Restore dump file
 
 * The target database must exist when restoring the data.
 
 ```cmd
 ./backup-svc --action pg_restore --name PG-DUMP-FILE
 ```
+
+#### Restore from physical copy
+
+This is done in more stages.
+
+* The target database must be stopped before restoring it.
+
+* Create a docker volume for the physical copy.
+
+* Get the physical copy from the S3 and unpack it in the docker volume which was created in the previous step
+```cmd
+docker container run --rm -i --name pg-backup --network=host -v <docker-volume>:/home $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_db-unpack --name TAR-FILE
+```
+
+* Copy the backup from the its docker volume to the pgdata of the database's docker volume
+```cmd
+docker run --rm -v <docker-volume>:/pg-backup -v <database-docker-volume>:/pg-data alpine cp -r /pg-backup/db-backup/ /pg-data/<target-pgdata>/
+```
+
+* Start the database container.
+
+**NOTE**
+
+Again here a docker container is used for the same reason explained in the `Pg_basebackup` section.
 
 ## MongoDB
 

@@ -196,7 +196,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			return err
 		}
 
-		c, err := newCompressor(key, e)
+		c, err := newCompressor(e)
 
 		if err != nil {
 			log.Errorf("Could not initialize encryptor: (%v)", err)
@@ -306,7 +306,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 		log.Error("Could not initialise decryptor", err)
 		return err
 	}
-	d, err := newDecompressor(key, r)
+	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
 		return err
