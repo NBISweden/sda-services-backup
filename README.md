@@ -91,7 +91,7 @@ This is done in more stages.
 
 * Create a docker volume for the physical copy.
 
-* Get the physical copy form the S3 and unpack it in the docker volume which has been created in the previous step
+* Get the physical copy from the S3 and unpack it in the docker volume which was created in the previous step
 ```cmd
 docker container run --rm -i --name pg-backup --network=host -v <docker-volume>:/home $(docker build -f dev_tools/Dockerfile-backup -q -t backup .) /bin/sda-backup --action pg_db-unpack --name TAR-FILE
 ```
