@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"sync"
@@ -91,7 +90,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	}
 
 	sourceFileName := destDir + ".tar"
-	data, err := ioutil.ReadFile(sourceFileName)
+	data, err := os.ReadFile(sourceFileName)
 	if err != nil {
 		log.Errorf("Error in reading source data: %v", err)
 	}
@@ -241,7 +240,7 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 		return err
 
 	}
-	data, err := ioutil.ReadAll(d)
+	data, err := io.ReadAll(d)
 	if err != nil {
 		log.Error("Could not read all data: ", err)
 		return err
