@@ -174,6 +174,7 @@ func configMongoDB() mongoConfig {
 	if viper.IsSet("mongo.replicaSet") {
 		mongo.replicaSet = viper.GetString("mongo.replicaSet")
 	}
+
 	return mongo
 }
 

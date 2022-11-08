@@ -21,6 +21,7 @@ func getKey(path string) []byte {
 	if err != nil {
 		log.Fatalf("Could not decode base64 key: %s", err)
 	}
+
 	return decodedkey
 }
 
@@ -61,6 +62,7 @@ func (d *decryptor) Read(p []byte) (n int, err error) {
 		return n, err
 	}
 	d.stream.XORKeyStream(p, b)
+
 	return n, err
 }
 
@@ -96,5 +98,6 @@ func (e *encryptor) Write(p []byte) (n int, err error) {
 	b := make([]byte, len(p))
 	e.stream.XORKeyStream(b, p)
 	n, err = e.w.Write(b)
+
 	return
 }
