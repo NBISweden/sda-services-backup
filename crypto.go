@@ -7,13 +7,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func getKey(path string) []byte {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Could not load cipher key: %s", err)
 	}

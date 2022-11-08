@@ -7,8 +7,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -81,7 +81,7 @@ func transportConfigES(config elasticConfig) http.RoundTripper {
 	cfg.RootCAs = systemCAs
 
 	if config.caCert != "" {
-		cacert, e := ioutil.ReadFile(config.caCert)
+		cacert, e := os.ReadFile(config.caCert)
 		if e != nil {
 			log.Fatalf("failed to append %q to RootCAs: %v", cacert, e)
 		}
@@ -312,7 +312,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 		return err
 
 	}
-	data, err := ioutil.ReadAll(d)
+	data, err := io.ReadAll(d)
 	if err != nil {
 		log.Error("Could not read all data: ", err)
 		return err
