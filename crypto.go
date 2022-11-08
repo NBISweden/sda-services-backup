@@ -47,7 +47,7 @@ func newDecryptor(key []byte, r io.Reader) (*decryptor, error) {
 	if err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCFBDecrypter(block, iv[:])
+	stream := cipher.NewCFBDecrypter(block, iv)
 
 	return &decryptor{
 		stream: stream,
@@ -77,7 +77,7 @@ func newEncryptor(key []byte, w io.Writer) (*encryptor, error) {
 		return nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv[:])
+	stream := cipher.NewCFBEncrypter(block, iv)
 
 	l, err := w.Write(iv)
 
