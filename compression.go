@@ -14,8 +14,10 @@ func newCompressor(w io.Writer) (io.WriteCloser, error) {
 
 	if err != nil {
 		log.Error("Unable to set zlib writer level", err)
+
 		return nil, err
 	}
+
 	return zw, nil
 }
 
@@ -24,7 +26,9 @@ func newDecompressor(r io.Reader) (io.ReadCloser, error) {
 	zr, err := zlib.NewReader(r)
 	if err != nil {
 		log.Error("Unable to create zlib reader", err)
+
 		return nil, err
 	}
+
 	return zr, err
 }

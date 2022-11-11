@@ -1,4 +1,4 @@
-FROM golang:1.16.5-alpine3.12
+FROM golang:1.19-alpine3.16
 COPY . .
 ENV GO111MODULE=on
 ENV GOPATH=$PWD
@@ -7,7 +7,7 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 RUN go build -ldflags "-extldflags -static" -o backup-svc .
 
-FROM alpine:3.16.2
+FROM alpine:3.16
 RUN apk add --no-cache postgresql-client mongodb-tools
 COPY --from=0 go/backup-svc /usr/local/bin/
 USER 65534

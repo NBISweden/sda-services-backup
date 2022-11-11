@@ -5,8 +5,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"reflect"
 	"strings"
 	"sync"
@@ -98,6 +98,7 @@ func (sb *s3Backend) NewFileReader(filePath string) (io.ReadCloser, error) {
 
 	if err != nil {
 		log.Error(err)
+
 		return nil, err
 	}
 
@@ -125,6 +126,7 @@ func (sb *s3Backend) NewFileWriter(filePath string, wg *sync.WaitGroup) (io.Writ
 			_ = reader.CloseWithError(err)
 		}
 	}()
+
 	return writer, nil
 }
 
@@ -144,7 +146,7 @@ func transportConfigS3(config S3Config) http.RoundTripper {
 	cfg.RootCAs = systemCAs
 
 	if config.Cacert != "" {
-		cacert, e := ioutil.ReadFile(config.Cacert) // #nosec this file comes from our config
+		cacert, e := os.ReadFile(config.Cacert) // #nosec this file comes from our config
 		if e != nil {
 			log.Fatalf("failed to append %q to RootCAs: %v", cacert, e)
 		}

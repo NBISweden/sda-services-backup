@@ -41,6 +41,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	err := cmd.Run()
 	if err != nil {
 		log.Errorf(errMsg.String())
+
 		return err
 	}
 
@@ -48,6 +49,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	wr, err := sb.NewFileWriter(today+"-"+database+".archive", &wg)
 	if err != nil {
 		log.Errorf("Could not open backup file for writing: %v", err)
+
 		return err
 	}
 
@@ -55,18 +57,21 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	e, err := newEncryptor(key, wr)
 	if err != nil {
 		log.Errorf("Could not initialize encryptor: (%v)", err)
+
 		return err
 	}
 
 	c, err := newCompressor(e)
 	if err != nil {
 		log.Errorf("Could not initialize compressor: (%v)", err)
+
 		return err
 	}
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
 		log.Errorf("Could not encrypt/write: %s", err)
+
 		return err
 	}
 
@@ -82,6 +87,7 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	fr, err := sb.NewFileReader(archive)
 	if err != nil {
 		log.Error(err)
+
 		return err
 	}
 	defer fr.Close()
@@ -90,11 +96,13 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	r, err := newDecryptor(key, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor", err)
+
 		return err
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
+
 		return err
 
 	}
@@ -109,6 +117,7 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	_, err = in.ReadFrom(d)
 	if err != nil {
 		log.Error("Could not read datastream", err)
+
 		return err
 
 	}
@@ -119,6 +128,7 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	err = cmd.Run()
 	if err != nil {
 		log.Errorf(errMsg.String())
+
 		return err
 	}
 

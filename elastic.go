@@ -7,8 +7,8 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -56,6 +56,7 @@ func newElasticClient(config elasticConfig) (*esClient, error) {
 			if i == 1 {
 				retryBackoff.Reset()
 			}
+
 			return retryBackoff.NextBackOff()
 		},
 		MaxRetries: 5,
@@ -81,7 +82,7 @@ func transportConfigES(config elasticConfig) http.RoundTripper {
 	cfg.RootCAs = systemCAs
 
 	if config.caCert != "" {
-		cacert, e := ioutil.ReadFile(config.caCert)
+		cacert, e := os.ReadFile(config.caCert)
 		if e != nil {
 			log.Fatalf("failed to append %q to RootCAs: %v", cacert, e)
 		}
@@ -103,6 +104,7 @@ func readResponse(r io.Reader) string {
 	if err != nil { // Maybe propagate this error upwards?
 		log.Fatal(err)
 	}
+
 	return b.String()
 }
 
@@ -176,6 +178,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 	if err != nil {
 		log.Errorf("Could not find indices to fetch: %v", err)
+
 		return err
 	}
 
@@ -193,6 +196,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 		if err != nil {
 			log.Errorf("Could not initialize encryptor: (%v)", err)
+
 			return err
 		}
 
@@ -200,6 +204,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 		if err != nil {
 			log.Errorf("Could not initialize encryptor: (%v)", err)
+
 			return err
 		}
 
@@ -207,6 +212,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 		if err != nil {
 			log.Errorf("Could not refresh indexes: %v", err)
+
 			return err
 		}
 
@@ -219,6 +225,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 		if err != nil {
 			log.Error(err)
+
 			return err
 		}
 
@@ -229,6 +236,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
 			log.Errorf("Could not encrypt/write: %s", err)
+
 			return err
 		}
 
@@ -245,10 +253,12 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			res, err := es.client.Scroll(es.client.Scroll.WithScrollID(scrollID), es.client.Scroll.WithScroll(time.Minute))
 			if err != nil {
 				log.Errorf("Error: %s", err)
+
 				return err
 			}
 			if res.IsError() {
 				log.Errorf("Error response: %s", res)
+
 				return err
 			}
 
@@ -262,11 +272,13 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 
 			if len(hits.Array()) < 1 {
 				log.Traceln("Finished scrolling")
+
 				break
 			} else {
 				_, err = c.Write([]byte(hits.Raw + "\n"))
 				if err != nil {
 					log.Errorf("Could not encrypt/write: %s", err)
+
 					return err
 				}
 				log.Debug("Batch   ", batchNum)
@@ -289,6 +301,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	err := es.countDocuments(fileName)
 	if err != nil {
 		log.Error(err)
+
 		return err
 	}
 	log.Infof("restoring index with name %s", fileName)
@@ -296,6 +309,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	fr, err := sb.NewFileReader(fileName)
 	if err != nil {
 		log.Error(err)
+
 		return err
 	}
 	defer fr.Close()
@@ -304,17 +318,20 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	r, err := newDecryptor(key, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor", err)
+
 		return err
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor", err)
+
 		return err
 
 	}
-	data, err := ioutil.ReadAll(d)
+	data, err := io.ReadAll(d)
 	if err != nil {
 		log.Error("Could not read all data: ", err)
+
 		return err
 	}
 	d.Close()
@@ -331,6 +348,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	})
 	if err != nil {
 		log.Errorf("Unexpected error: %s", err)
+
 		return err
 	}
 	defer bi.Close(context.Background())
@@ -338,6 +356,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	for _, docs := range strings.Split(ud, "\n") {
 		if docs == "" {
 			log.Debug("End of blob reached")
+
 			break
 		}
 		i := 0
@@ -368,6 +387,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 			)
 			if err != nil {
 				log.Errorf("Unexpected error: %s", err)
+
 				return err
 			}
 			i++

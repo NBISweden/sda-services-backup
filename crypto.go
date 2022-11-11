@@ -7,13 +7,13 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"os"
 
 	log "github.com/sirupsen/logrus"
 )
 
 func getKey(path string) []byte {
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		log.Fatalf("Could not load cipher key: %s", err)
 	}
@@ -21,6 +21,7 @@ func getKey(path string) []byte {
 	if err != nil {
 		log.Fatalf("Could not decode base64 key: %s", err)
 	}
+
 	return decodedkey
 }
 
@@ -46,7 +47,7 @@ func newDecryptor(key []byte, r io.Reader) (*decryptor, error) {
 	if err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCFBDecrypter(block, iv[:])
+	stream := cipher.NewCFBDecrypter(block, iv)
 
 	return &decryptor{
 		stream: stream,
@@ -61,6 +62,7 @@ func (d *decryptor) Read(p []byte) (n int, err error) {
 		return n, err
 	}
 	d.stream.XORKeyStream(p, b)
+
 	return n, err
 }
 
@@ -75,7 +77,7 @@ func newEncryptor(key []byte, w io.Writer) (*encryptor, error) {
 		return nil, err
 	}
 
-	stream := cipher.NewCFBEncrypter(block, iv[:])
+	stream := cipher.NewCFBEncrypter(block, iv)
 
 	l, err := w.Write(iv)
 
@@ -96,5 +98,6 @@ func (e *encryptor) Write(p []byte) (n int, err error) {
 	b := make([]byte, len(p))
 	e.stream.XORKeyStream(b, p)
 	n, err = e.w.Write(b)
+
 	return
 }
