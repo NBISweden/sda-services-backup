@@ -48,7 +48,7 @@ docker exec mongodb-0 mongo -u root -p password123 --host localhost:27017 $TLS -
 DUMPFILE=$(s3cmd -c dev_tools/s3conf ls s3://dumps/ | grep "$NOW.archive" | cut -d '/' -f4)
 echo "restoring databse from file $DUMPFILE"
 
-if [ "$2" == "docker" ]; then
+if [ "$docker" == "docker" ]; then
   docker run --rm --network=dev_tools_default -v $PWD/dev_tools:/conf/:ro -e CONFIGFILE="/conf/dockerfile_config_mongo.yaml" nbisweden/sda-backup:test backup-svc --action mongo_restore --name "$DUMPFILE"
 else
   CONFIGFILE="dev_tools/config_mongo.yaml" go run . --action mongo_restore --name "$DUMPFILE"
