@@ -306,7 +306,7 @@ func buildConnInfo(db DBConf) string {
 		certsRequired = true
 	case "verify-ca":
 		certsRequired = true
-	case "verify-peer":
+	case "verify-full":
 		certsRequired = true
 	}
 
