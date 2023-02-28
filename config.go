@@ -120,8 +120,8 @@ func configPostgres() DBConf {
 		pg.port = viper.GetInt("db.port")
 	}
 
-	if viper.IsSet("db.sslMode") {
-		pg.sslMode = viper.GetString("db.sslMode")
+	if viper.IsSet("db.sslmode") {
+		pg.sslMode = viper.GetString("db.sslmode")
 		if pg.sslMode == "verify-full" {
 			if !viper.IsSet("db.clientcert") || !viper.IsSet("db.clientkey") {
 				log.Fatalln("client certificates are required when sslmode is 'verify-full'")
