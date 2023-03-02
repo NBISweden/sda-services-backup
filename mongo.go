@@ -40,15 +40,13 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(today+"-"+database+".archive", &wg)
 	if err != nil {
-		log.Errorf("Could not open backup file for writing: %v", err)
+		log.Error("Could not open backup file for writing")
 
 		return err
 	}
@@ -56,21 +54,21 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
 	if err != nil {
-		log.Errorf("Could not initialize encryptor: (%v)", err)
+		log.Error("Could not initialize encryptor")
 
 		return err
 	}
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Errorf("Could not initialize compressor: (%v)", err)
+		log.Error("Could not initialize compressor")
 
 		return err
 	}
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
-		log.Errorf("Could not encrypt/write: %s", err)
+		log.Errorf("Could not encrypt/write")
 
 		return err
 	}
@@ -86,8 +84,6 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	fr, err := sb.NewFileReader(archive)
 	if err != nil {
-		log.Error(err)
-
 		return err
 	}
 	defer fr.Close()
@@ -95,13 +91,13 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	key := getKey(keyPath)
 	r, err := newDecryptor(key, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor", err)
+		log.Error("Could not initialise decryptor")
 
 		return err
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor", err)
+		log.Error("Could not initialise decompressor")
 
 		return err
 
@@ -116,7 +112,7 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	_, err = in.ReadFrom(d)
 	if err != nil {
-		log.Error("Could not read datastream", err)
+		log.Error("Could not read datastream")
 
 		return err
 
@@ -127,8 +123,6 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 

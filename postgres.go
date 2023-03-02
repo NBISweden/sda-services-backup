@@ -44,8 +44,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
@@ -55,8 +53,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
@@ -66,8 +62,6 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
@@ -75,7 +69,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(fileName, &wg)
 	if err != nil {
-		log.Errorf("Could not open backup file for writing: %v", err)
+		log.Error("Could not open backup file for writing")
 
 		return err
 	}
@@ -83,14 +77,14 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
 	if err != nil {
-		log.Errorf("Could not initialize encryptor: (%v)", err)
+		log.Error("Could not initialize encryptor")
 
 		return err
 	}
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Errorf("Could not initialize compressor: (%v)", err)
+		log.Error("Could not initialize compressor")
 
 		return err
 	}
@@ -132,15 +126,13 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 
 	err := cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(today+"-"+db.database+".sqldump", &wg)
 	if err != nil {
-		log.Errorf("Could not open backup file for writing: %v", err)
+		log.Error("Could not open backup file for writing")
 
 		return err
 	}
@@ -148,21 +140,21 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
 	if err != nil {
-		log.Errorf("Could not initialize encryptor: (%v)", err)
+		log.Error("Could not initialize encryptor")
 
 		return err
 	}
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Errorf("Could not initialize compressor: (%v)", err)
+		log.Error("Could not initialize compressor")
 
 		return err
 	}
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
-		log.Errorf("Could not encrypt/write: %s", err)
+		log.Error("Could not encrypt/write")
 
 		return err
 	}
@@ -187,8 +179,6 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	fr, err := sb.NewFileReader(backupTar)
 	if err != nil {
-		log.Error(err)
-
 		return err
 	}
 	defer fr.Close()
@@ -196,14 +186,14 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 	key := getKey(keyPath)
 	r, err := newDecryptor(key, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor", err)
+		log.Error("Could not initialise decryptor")
 
 		return err
 	}
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Errorf("Could not initialise decompressor: %v", err)
+		log.Error("Could not initialise decompressor")
 
 		return err
 
@@ -211,7 +201,7 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	_, err = io.Copy(localTar, d)
 	if err != nil {
-		log.Errorf("Error in copying file: %v", err)
+		log.Errorf("Error in copying file")
 
 		return err
 	}
@@ -222,8 +212,6 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
@@ -239,8 +227,6 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 
 	fr, err := sb.NewFileReader(sqlDump)
 	if err != nil {
-		log.Error(err)
-
 		return err
 	}
 	defer fr.Close()
@@ -248,20 +234,20 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 	key := getKey(keyPath)
 	r, err := newDecryptor(key, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor", err)
+		log.Error("Could not initialise decryptor")
 
 		return err
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor", err)
+		log.Error("Could not initialise decompressor")
 
 		return err
 
 	}
 	data, err := io.ReadAll(d)
 	if err != nil {
-		log.Error("Could not read all data: ", err)
+		log.Error("Could not read all data")
 
 		return err
 	}
@@ -279,8 +265,6 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 
 	err = cmd.Run()
 	if err != nil {
-		log.Errorf(errMsg.String())
-
 		return err
 	}
 
