@@ -150,10 +150,6 @@ func configMongoDB() mongoConfig {
 		mongo.authSource = viper.GetString("mongo.authSource")
 	}
 
-	if viper.IsSet("mongo.tls") {
-		mongo.tls = viper.GetBool("mongo.tls")
-	}
-
 	if viper.IsSet("mongo.port") {
 		mongo.port = viper.GetInt("mongo.port")
 	}
