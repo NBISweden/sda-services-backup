@@ -13,8 +13,10 @@ func main() {
 
 	sb, err := newS3Backend(conf.s3)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Could not connect to s3 backend: ", err)
 	}
+
+	log.Infof("Connection to s3 bucket %v established", sb.Bucket)
 
 	var elastic *esClient
 	if conf.elastic != (elasticConfig{}) {
