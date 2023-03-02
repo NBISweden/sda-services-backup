@@ -25,6 +25,7 @@ type mongoConfig struct {
 }
 
 func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
+	log.Info("Mongo dump started")
 	today := time.Now().Format("20060102150405")
 	mongo.database = database
 	dumpCommand := buildDumpCommand(mongo)
@@ -43,13 +44,18 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 		return err
 	}
 
+	log.Debug("Mongo dump command successfully executed")
+
 	wg := sync.WaitGroup{}
-	wr, err := sb.NewFileWriter(today+"-"+database+".archive", &wg)
+	mongoArchive := today + "-" + database + ".archive"
+	wr, err := sb.NewFileWriter(mongoArchive, &wg)
 	if err != nil {
 		log.Error("Could not open backup file for writing")
 
 		return err
 	}
+
+	log.Debugf("Mongo archive file %v ready for writting", mongoArchive)
 
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
@@ -59,12 +65,16 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 		return err
 	}
 
+	log.Debug("Encryption initialized")
+
 	c, err := newCompressor(e)
 	if err != nil {
 		log.Error("Could not initialize compressor")
 
 		return err
 	}
+
+	log.Debug("Compression initialized")
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
@@ -77,16 +87,20 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	wr.Close()
 	wg.Wait()
 
+	log.Info("Mongo archive is compressed and encrypted")
+
 	return nil
 }
 
 func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
-
+	log.Info("Start restoration from mongo archive")
 	fr, err := sb.NewFileReader(archive)
 	if err != nil {
 		return err
 	}
 	defer fr.Close()
+
+	log.Debug("Read mongo file")
 
 	key := getKey(keyPath)
 	r, err := newDecryptor(key, fr)
@@ -95,6 +109,9 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 		return err
 	}
+
+	log.Debug("Decryption initialized")
+
 	d, err := newDecompressor(r)
 	if err != nil {
 		log.Error("Could not initialise decompressor")
@@ -102,6 +119,8 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 		return err
 
 	}
+
+	log.Debug("Decompression initialized")
 
 	restoreCommand := buildRestoreCommand(mongo)
 	log.Debugln(restoreCommand)
@@ -118,6 +137,8 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	}
 
+	log.Debug("Data read successfully")
+
 	var errMsg bytes.Buffer
 	cmd.Stderr = &errMsg
 
@@ -125,6 +146,8 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 	if err != nil {
 		return err
 	}
+
+	log.Debug("Importing mongo data finished")
 
 	return nil
 }
