@@ -81,7 +81,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 		return err
 	}
 
-	log.Debugf("Backup file %v ready for writting", fileName)
+	log.Debugf("Backup file %v ready for writing", fileName)
 
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
