@@ -55,7 +55,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 		return err
 	}
 
-	log.Debugf("Mongo archive file %v ready for writting", mongoArchive)
+	log.Debugf("Mongo archive file %v ready for writing", mongoArchive)
 
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
