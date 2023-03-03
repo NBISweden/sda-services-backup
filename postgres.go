@@ -156,7 +156,7 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 		return err
 	}
 
-	log.Debugf("Dump file %v ready for writting", dumpFile)
+	log.Debugf("Dump file %v ready for writing", dumpFile)
 
 	key := getKey(keyPath)
 	e, err := newEncryptor(key, wr)
