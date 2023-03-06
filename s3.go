@@ -40,6 +40,7 @@ type S3Config struct {
 }
 
 func newS3Backend(config S3Config) (*s3Backend, error) {
+	log.Info("Start initializing the S3 backend")
 	s3Transport := transportConfigS3(config)
 	client := http.Client{Transport: s3Transport}
 	s3Session := session.Must(session.NewSession(
@@ -94,13 +95,13 @@ func (sb *s3Backend) NewFileReader(filePath string) (io.ReadCloser, error) {
 		Key:    aws.String(filePath),
 	})
 
-	log.Infof("Retrieved backup content len: %v", *r.ContentLength)
-
 	if err != nil {
-		log.Error(err)
+		log.Error("Failed to retrieve s3 content")
 
 		return nil, err
 	}
+
+	log.Infof("Retrieved backup content len: %v", *r.ContentLength)
 
 	return r.Body, nil
 }
