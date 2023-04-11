@@ -270,18 +270,18 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 				log.Traceln("Finished scrolling")
 
 				break
-			} else {
-				_, err = c.Write([]byte(hits.Raw + "\n"))
-				if err != nil {
-					log.Error("Could not encrypt/write")
-
-					return err
-				}
-				log.Debug("Batch   ", batchNum)
-				log.Trace("ScrollID", scrollID)
-				log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
-				log.Trace(strings.Repeat("-", 80))
 			}
+
+			_, err = c.Write([]byte(hits.Raw + "\n"))
+			if err != nil {
+				log.Error("Could not encrypt/write")
+
+				return err
+			}
+			log.Debug("Batch   ", batchNum)
+			log.Trace("ScrollID", scrollID)
+			log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
+			log.Trace(strings.Repeat("-", 80))
 		}
 		c.Close()
 		wr.Close()
