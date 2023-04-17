@@ -16,5 +16,5 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v3.4.0
         with:
-          version: v1.50
-          args: --timeout 5m -E gosec,goconst,nestif,interfacer,bodyclose,rowserrcheck
+          version: v1.52
+          args: --timeout 5m -E bodyclose,gocritic,gofmt,gosec,govet,nestif,nlreturn,revive,rowserrcheck
