@@ -1,4 +1,4 @@
-encryptionKey: "./dev_tools/keys/backup.key"
+crypt4ghPublicKey: "./dev_tools/keys/backup.pub.pem"
 loglevel: debug
 s3:
   url: "https://127.0.0.1"

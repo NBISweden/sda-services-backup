@@ -184,7 +184,7 @@ func (c *Config) readConfig() {
 
 	c.elastic = configElastic()
 
-	c.keyPath = viper.GetString("encryptionKey")
+	c.keyPath = viper.GetString("crypt4ghPublicKey")
 
 	if viper.IsSet("loglevel") {
 		stringLevel := viper.GetString("loglevel")
