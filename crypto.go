@@ -4,25 +4,49 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
-	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
 
+	"github.com/neicnordic/crypt4gh/keys"
 	log "github.com/sirupsen/logrus"
 )
 
-func getKey(path string) []byte {
-	data, err := os.ReadFile(path)
+// Generates a crypt4gh key pair, returning only the private key, as the
+// public key used for encryption is the config file.
+func generatePrivateKey() (*[32]byte, error) {
+	log.Debug("Generating encryption key")
+
+	_, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
-		log.Fatalf("Could not load cipher key: %s", err)
-	}
-	decodedkey, err := base64.StdEncoding.DecodeString(string(data))
-	if err != nil {
-		log.Fatalf("Could not decode base64 key: %s", err)
+		return nil, err
 	}
 
-	return decodedkey
+	return &privateKey, nil
+}
+
+func getKeys(path string) ([32]byte, [][32]byte) {
+	// Generate private key
+	privateKeyData, err := generatePrivateKey()
+	if err != nil {
+		log.Fatalf("Could not generate public key: %s", err)
+	}
+
+	// Get public key
+	log.Debug("Getting public key")
+	publicKey, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("Could not open public key: %s", err)
+	}
+	publicKeyData, err := keys.ReadPublicKey(publicKey)
+	if err != nil {
+		log.Fatalf("Could not load public key: %s", err)
+	}
+
+	var publicKeyFileList [][32]byte
+	publicKeyFileList = append(publicKeyFileList, publicKeyData)
+
+	return *privateKeyData, publicKeyFileList
 }
 
 type encryptor struct {
