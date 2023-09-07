@@ -3,12 +3,11 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
-	"crypto/rand"
-	"fmt"
 	"io"
 	"os"
 
 	"github.com/neicnordic/crypt4gh/keys"
+	"github.com/neicnordic/crypt4gh/streaming"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -90,32 +89,14 @@ func (d *decryptor) Read(p []byte) (n int, err error) {
 	return n, err
 }
 
-func newEncryptor(key []byte, w io.Writer) (*encryptor, error) {
-	block, err := aes.NewCipher(key)
+func newEncryptor(pubKeyList [][32]byte, privateKey [32]byte, w io.Writer) (*streaming.Crypt4GHWriter, error) {
+
+	crypt4GHWriter, err := streaming.NewCrypt4GHWriter(w, privateKey, pubKeyList, nil)
 	if err != nil {
 		return nil, err
 	}
-	iv := make([]byte, aes.BlockSize)
 
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-
-	l, err := w.Write(iv)
-
-	if err != nil {
-		return nil, err
-	}
-	if l != len(iv) {
-		return nil, fmt.Errorf("Ecnryptor, failed to write iv")
-	}
-
-	return &encryptor{
-		stream: stream,
-		w:      w,
-	}, nil
+	return crypt4GHWriter, nil
 }
 
 func (e *encryptor) Write(p []byte) (n int, err error) {
