@@ -57,8 +57,8 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 
 	log.Debugf("Mongo archive file %v ready for writing", mongoArchive)
 
-	key := getKey(keyPath)
-	e, err := newEncryptor(key, wr)
+	privateKey, publicKeyList := getKeys(keyPath)
+	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
 		log.Error("Could not initialize encryptor")
 
@@ -83,8 +83,20 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 		return err
 	}
 
-	c.Close()
-	wr.Close()
+	err = c.Close()
+	if err != nil {
+		log.Errorf("Could not close compressor: %v", err)
+	}
+
+	err = e.Close()
+	if err != nil {
+		log.Errorf("Could not close encryptor: %v", err)
+	}
+
+	err = wr.Close()
+	if err != nil {
+		log.Errorf("Could not close destination file: %v", err)
+	}
 	wg.Wait()
 
 	log.Info("Mongo archive is compressed and encrypted")

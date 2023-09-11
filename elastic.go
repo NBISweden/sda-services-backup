@@ -190,9 +190,9 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			log.Fatalf("Could not open backup file for writing: %v", err)
 		}
 
-		key := getKey(keyPath)
+		privateKey, publicKeyList := getKeys(keyPath)
 
-		e, err := newEncryptor(key, wr)
+		e, err := newEncryptor(publicKeyList, privateKey, wr)
 
 		if err != nil {
 			log.Error("Could not initialize encryptor")
@@ -283,8 +283,20 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
 			log.Trace(strings.Repeat("-", 80))
 		}
-		c.Close()
-		wr.Close()
+		err = c.Close()
+		if err != nil {
+			log.Errorf("Could not close compressor: %v", err)
+		}
+
+		err = e.Close()
+		if err != nil {
+			log.Errorf("Could not close encryptor: %v", err)
+		}
+
+		err = wr.Close()
+		if err != nil {
+			log.Errorf("Could not close destination file: %v", err)
+		}
 		wg.Wait()
 	}
 
