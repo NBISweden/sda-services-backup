@@ -43,7 +43,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "es_restore":
-		err := elastic.restoreDocuments(sb, conf.keyPath, flags.name)
+		err := elastic.restoreDocuments(sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -53,7 +53,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "mongo_restore":
-		err := mongo.restore(*sb, conf.keyPath, flags.name)
+		err := mongo.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -63,7 +63,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "pg_restore":
-		err := pg.restore(*sb, conf.keyPath, flags.name)
+		err := pg.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -73,7 +73,7 @@ func main() {
 			log.Fatal(err)
 		}
 	case "pg_db-unpack":
-		err := pg.baseBackupUnpack(*sb, conf.keyPath, flags.name)
+		err := pg.baseBackupUnpack(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}

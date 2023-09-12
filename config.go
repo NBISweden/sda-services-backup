@@ -18,11 +18,13 @@ type ClFlags struct {
 
 // Config is a parent object for all the different configuration parts
 type Config struct {
-	db      DBConf
-	elastic elasticConfig
-	mongo   mongoConfig
-	s3      S3Config
-	keyPath string
+	db             DBConf
+	elastic        elasticConfig
+	mongo          mongoConfig
+	s3             S3Config
+	keyPath        string
+	privateKeyPath string
+	c4ghPassword   string
 }
 
 // NewConfig initializes and parses the config file and/or environment using
@@ -185,6 +187,10 @@ func (c *Config) readConfig() {
 	c.elastic = configElastic()
 
 	c.keyPath = viper.GetString("crypt4ghPublicKey")
+
+	c.privateKeyPath = viper.GetString("crypt4ghPrivateKey")
+
+	c.c4ghPassword = viper.GetString("crypt4ghPassphrase")
 
 	if viper.IsSet("loglevel") {
 		stringLevel := viper.GetString("loglevel")
