@@ -1,8 +1,6 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
 	"io"
 	"os"
 
@@ -24,6 +22,10 @@ func generatePrivateKey() (*[32]byte, error) {
 	return &privateKey, nil
 }
 
+// Function for getting the public key which is given in the config file
+// and the private key which is generated on the fly and not stored.
+// Returns the generated private key and a list with the public key
+// in order to encrypt the file.
 func getKeys(path string) ([32]byte, [][32]byte) {
 	// Generate private key
 	privateKeyData, err := generatePrivateKey()
@@ -48,45 +50,30 @@ func getKeys(path string) ([32]byte, [][32]byte) {
 	return *privateKeyData, publicKeyFileList
 }
 
-type encryptor struct {
-	stream cipher.Stream
-	w      io.Writer
+// Function for getting the private key (for decrypting) which is given in the config file
+func getPrivateKey(path, password string) [32]byte {
+	// Get private key
+	log.Debug("Getting private key")
+	privateKey, err := os.Open(path)
+	if err != nil {
+		log.Fatalf("Could not open private key: %s", err)
+	}
+
+	privateKeyData, err := keys.ReadPrivateKey(privateKey, []byte(password))
+	if err != nil {
+		log.Fatalf("Could not load private key: %s", err)
+	}
+
+	return privateKeyData
 }
 
-type decryptor struct {
-	stream cipher.Stream
-	r      io.Reader
-}
-
-func newDecryptor(key []byte, r io.Reader) (*decryptor, error) {
-	iv := make([]byte, aes.BlockSize)
-	_, err := io.ReadFull(r, iv)
-
+func newDecryptor(privateKey [32]byte, r io.Reader) (*streaming.Crypt4GHReader, error) {
+	crypt4GHReader, err := streaming.NewCrypt4GHReader(r, privateKey, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(key)
-	if err != nil {
-		return nil, err
-	}
-	stream := cipher.NewCFBDecrypter(block, iv)
-
-	return &decryptor{
-		stream: stream,
-		r:      r,
-	}, nil
-}
-
-func (d *decryptor) Read(p []byte) (n int, err error) {
-	b := make([]byte, len(p))
-	n, err = d.r.Read(b)
-	if n == 0 {
-		return n, err
-	}
-	d.stream.XORKeyStream(p, b)
-
-	return n, err
+	return crypt4GHReader, nil
 }
 
 func newEncryptor(pubKeyList [][32]byte, privateKey [32]byte, w io.Writer) (*streaming.Crypt4GHWriter, error) {
@@ -97,12 +84,4 @@ func newEncryptor(pubKeyList [][32]byte, privateKey [32]byte, w io.Writer) (*str
 	}
 
 	return crypt4GHWriter, nil
-}
-
-func (e *encryptor) Write(p []byte) (n int, err error) {
-	b := make([]byte, len(p))
-	e.stream.XORKeyStream(b, p)
-	n, err = e.w.Write(b)
-
-	return
 }
