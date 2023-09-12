@@ -22,7 +22,7 @@ type Config struct {
 	elastic        elasticConfig
 	mongo          mongoConfig
 	s3             S3Config
-	keyPath        string
+	publicKeyPath  string
 	privateKeyPath string
 	c4ghPassword   string
 }
@@ -186,7 +186,7 @@ func (c *Config) readConfig() {
 
 	c.elastic = configElastic()
 
-	c.keyPath = viper.GetString("crypt4ghPublicKey")
+	c.publicKeyPath = viper.GetString("crypt4ghPublicKey")
 
 	c.privateKeyPath = viper.GetString("crypt4ghPrivateKey")
 

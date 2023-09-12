@@ -24,7 +24,7 @@ type mongoConfig struct {
 	clientCert string
 }
 
-func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
+func (mongo mongoConfig) dump(sb s3Backend, publicKeyPath, database string) error {
 	log.Info("Mongo dump started")
 	today := time.Now().Format("20060102150405")
 	mongo.database = database
@@ -57,7 +57,15 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 
 	log.Debugf("Mongo archive file %v ready for writing", mongoArchive)
 
-	privateKey, publicKeyList := getKeys(keyPath)
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
+	if err != nil {
+		log.Error("Could not retrieve public key or generate private key")
+
+		return err
+	}
+
+	log.Debug("Public key retrieved and private key successfully created")
+
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
 		log.Error("Could not initialize encryptor")
@@ -114,7 +122,15 @@ func (mongo mongoConfig) restore(sb s3Backend, privateKeyPath, archive, c4ghPass
 
 	log.Debug("Read mongo file")
 
-	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
+	if err != nil {
+		log.Error("Could not retrieve private key")
+
+		return err
+	}
+
+	log.Debug("Private key retrieved")
+
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")

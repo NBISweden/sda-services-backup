@@ -33,7 +33,7 @@ type DBConf struct {
 // - compresses the encrypted file
 // - gets the key and encrypts the tar file
 // - puts the encrypted and compressed file in S3
-func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
+func (db DBConf) basebackup(sb s3Backend, publicKeyPath string) error {
 	log.Info("Basebackup started")
 	today := time.Now().Format("20060102150405")
 	destDir := "db-backup"
@@ -83,7 +83,15 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 
 	log.Debugf("Backup file %v ready for writing", fileName)
 
-	privateKey, publicKeyList := getKeys(keyPath)
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
+	if err != nil {
+		log.Error("Could not retrieve public key or generate private key")
+
+		return err
+	}
+
+	log.Debug("Public key retrieved and private key successfully created")
+
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
 		log.Error("Could not initialize encryptor")
@@ -133,7 +141,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	return nil
 }
 
-func (db DBConf) dump(sb s3Backend, keyPath string) error {
+func (db DBConf) dump(sb s3Backend, publicKeyPath string) error {
 	log.Info("Dump backup started")
 	today := time.Now().Format("20060102150405")
 	dbURI := buildConnInfo(db)
@@ -163,7 +171,14 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 
 	log.Debugf("Dump file %v ready for writing", dumpFile)
 
-	privateKey, publicKeyList := getKeys(keyPath)
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
+	if err != nil {
+		log.Error("Could not retrieve public key or generate private key")
+
+		return err
+	}
+
+	log.Debug("Public key retrieved and private key successfully created")
 
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
@@ -233,7 +248,15 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, privateKeyPath, backupTar, c4ghP
 
 	log.Debug("Data ready for unpacking")
 
-	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
+	if err != nil {
+		log.Error("Could not retrieve private key")
+
+		return err
+	}
+
+	log.Debug("Private key retrieved")
+
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
@@ -298,7 +321,15 @@ func (db DBConf) restore(sb s3Backend, privateKeyPath, sqlDump, c4ghPassword str
 
 	log.Debug("Read dump file")
 
-	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
+	if err != nil {
+		log.Error("Could not retrieve private key")
+
+		return err
+	}
+
+	log.Debug("Private key retrieved")
+
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")

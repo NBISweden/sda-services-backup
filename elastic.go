@@ -156,7 +156,7 @@ func findIndices(es esClient, indexGlob string) ([]string, error) {
 
 }
 
-func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) error {
+func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob string) error {
 	log.Infof("Backing up indexes that match glob: %s", indexGlob)
 	var (
 		batchNum int
@@ -190,7 +190,16 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 			log.Fatalf("Could not open backup file for writing: %v", err)
 		}
 
-		privateKey, publicKeyList := getKeys(keyPath)
+		log.Debug("Backup file ready for writing")
+
+		privateKey, publicKeyList, err := getKeys(publicKeyPath)
+		if err != nil {
+			log.Error("Could not retrieve public key or generate private key")
+
+			return err
+		}
+
+		log.Debug("Public key retrieved and private key successfully created")
 
 		e, err := newEncryptor(publicKeyList, privateKey, wr)
 
@@ -319,7 +328,15 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 	}
 	defer fr.Close()
 
-	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
+	if err != nil {
+		log.Error("Could not retrieve private key")
+
+		return err
+	}
+
+	log.Debug("Private key retrieved")
+
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
