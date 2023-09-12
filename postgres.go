@@ -216,7 +216,7 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 // - decrypts and decompress the data
 // - untar the data
 // - puts the db copy in the running container
-func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error {
+func (db DBConf) baseBackupUnpack(sb s3Backend, privateKeyPath, backupTar, c4ghPassword string) error {
 	log.Info("Unpacking basebackup data started")
 	localTar, err := os.Create("/home/backup.tar")
 	if err != nil {
@@ -233,8 +233,8 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	log.Debug("Data ready for unpacking")
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
 
@@ -278,12 +278,17 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
+	err = r.Close()
+	if err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
+	}
+
 	log.Info("Data copied succesfully")
 
 	return nil
 }
 
-func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
+func (db DBConf) restore(sb s3Backend, privateKeyPath, sqlDump, c4ghPassword string) error {
 	log.Info("Start importing dump file")
 	fr, err := sb.NewFileReader(sqlDump)
 	if err != nil {
@@ -293,8 +298,8 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 
 	log.Debug("Read dump file")
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
 
@@ -319,7 +324,16 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 
 		return err
 	}
-	d.Close()
+
+	err = d.Close()
+	if err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
+	}
+
+	err = r.Close()
+	if err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
+	}
 
 	log.Debug("Data read successfully")
 

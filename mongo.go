@@ -104,7 +104,7 @@ func (mongo mongoConfig) dump(sb s3Backend, keyPath, database string) error {
 	return nil
 }
 
-func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
+func (mongo mongoConfig) restore(sb s3Backend, privateKeyPath, archive, c4ghPassword string) error {
 	log.Info("Start restoration from mongo archive")
 	fr, err := sb.NewFileReader(archive)
 	if err != nil {
@@ -114,8 +114,8 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 	log.Debug("Read mongo file")
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
 
@@ -147,6 +147,16 @@ func (mongo mongoConfig) restore(sb s3Backend, keyPath, archive string) error {
 
 		return err
 
+	}
+
+	err = d.Close()
+	if err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
+	}
+
+	err = r.Close()
+	if err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
 	}
 
 	log.Debug("Data read successfully")

@@ -303,7 +303,7 @@ func (es esClient) backupDocuments(sb *s3Backend, keyPath, indexGlob string) err
 	return nil
 }
 
-func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) error {
+func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4ghPassword string) error {
 	var countSuccessful uint64
 
 	err := es.countDocuments(fileName)
@@ -319,8 +319,8 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 	}
 	defer fr.Close()
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey := getPrivateKey(privateKeyPath, c4ghPassword)
+	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
 		log.Error("Could not initialise decryptor")
 
@@ -339,7 +339,16 @@ func (es *esClient) restoreDocuments(sb *s3Backend, keyPath, fileName string) er
 
 		return err
 	}
-	d.Close()
+
+	err = d.Close()
+	if err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
+	}
+
+	err = r.Close()
+	if err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
+	}
 
 	ud := string(data)
 
