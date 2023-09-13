@@ -1,6 +1,6 @@
 crypt4ghPublicKey: "./dev_tools/keys/backup.pub.pem"
 crypt4ghPrivateKey: "./dev_tools/keys/backup.sec.pem"
-crypt4ghPassphrase: ""
+crypt4ghPassphrase: "randomPass"
 loglevel: debug
 s3:
   url: "https://127.0.0.1"
