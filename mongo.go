@@ -50,45 +50,35 @@ func (mongo mongoConfig) dump(sb s3Backend, publicKeyPath, database string) erro
 	mongoArchive := today + "-" + database + ".archive"
 	wr, err := sb.NewFileWriter(mongoArchive, &wg)
 	if err != nil {
-		log.Error("Could not open backup file for writing")
-
-		return err
+		return fmt.Errorf("Could not open backup file for writing: %s", err)
 	}
 
 	log.Debugf("Mongo archive file %v ready for writing", mongoArchive)
 
 	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
-		log.Error("Could not retrieve public key or generate private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
 	}
 
 	log.Debug("Public key retrieved and private key successfully created")
 
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
-		log.Error("Could not initialize encryptor")
-
-		return err
+		return fmt.Errorf("Could not initialize encryptor: %s", err)
 	}
 
 	log.Debug("Encryption initialized")
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Error("Could not initialize compressor")
-
-		return err
+		return fmt.Errorf("Could not initialize compressor: %s", err)
 	}
 
 	log.Debug("Compression initialized")
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
-		log.Errorf("Could not encrypt/write")
-
-		return err
+		log.Errorf("Could not encrypt/write: %s", err)
 	}
 
 	if err := c.Close(); err != nil {
@@ -121,28 +111,21 @@ func (mongo mongoConfig) restore(sb s3Backend, privateKeyPath, archive, c4ghPass
 
 	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not retrieve private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve private key: %s", err)
 	}
 
 	log.Debug("Private key retrieved")
 
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
-
-		return err
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 
 	log.Debug("Decryption initialized")
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 
 	log.Debug("Decompression initialized")
@@ -156,10 +139,7 @@ func (mongo mongoConfig) restore(sb s3Backend, privateKeyPath, archive, c4ghPass
 
 	_, err = in.ReadFrom(d)
 	if err != nil {
-		log.Error("Could not read datastream")
-
-		return err
-
+		return fmt.Errorf("Could not read datastream: %s", err)
 	}
 
 	if err := d.Close(); err != nil {
