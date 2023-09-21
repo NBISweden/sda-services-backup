@@ -3,7 +3,7 @@
 ## Build the app
 
 ```cmd
-go build -ldflags "-extldflags -static" -o backup-svc .
+go build -ldflags "-extldflags -static" -o backup-svc . 
 ```
 
 ## Configuration
