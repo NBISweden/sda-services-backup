@@ -76,36 +76,28 @@ func (db DBConf) basebackup(sb s3Backend, publicKeyPath string) error {
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(fileName, &wg)
 	if err != nil {
-		log.Error("Could not open backup file for writing")
-
-		return err
+		return fmt.Errorf("Could not open backup file for writing: %s", err)
 	}
 
 	log.Debugf("Backup file %v ready for writing", fileName)
 
 	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
-		log.Error("Could not retrieve public key or generate private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
 	}
 
 	log.Debug("Public key retrieved and private key successfully created")
 
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
-		log.Error("Could not initialize encryptor")
-
-		return err
+		return fmt.Errorf("Could not initialize encryptor: %s", err)
 	}
 
 	log.Debug("Encryption initialized")
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Error("Could not initialize compressor")
-
-		return err
+		return fmt.Errorf("Could not initialize compressor: %s", err)
 	}
 
 	log.Debug("Compression initialized")
@@ -163,45 +155,35 @@ func (db DBConf) dump(sb s3Backend, publicKeyPath string) error {
 	dumpFile := today + "-" + db.database + ".sqldump"
 	wr, err := sb.NewFileWriter(dumpFile, &wg)
 	if err != nil {
-		log.Error("Could not open backup file for writing")
-
-		return err
+		return fmt.Errorf("Could not open backup file for writing: %s", err)
 	}
 
 	log.Debugf("Dump file %v ready for writing", dumpFile)
 
 	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
-		log.Error("Could not retrieve public key or generate private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
 	}
 
 	log.Debug("Public key retrieved and private key successfully created")
 
 	e, err := newEncryptor(publicKeyList, privateKey, wr)
 	if err != nil {
-		log.Error("Could not initialize encryptor")
-
-		return err
+		return fmt.Errorf("Could not initialize encryptor: %s", err)
 	}
 
 	log.Debug("Encryption initialized")
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Error("Could not initialize compressor")
-
-		return err
+		return fmt.Errorf("Could not initialize compressor: %s", err)
 	}
 
 	log.Debug("Compression initialized")
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
-		log.Error("Could not encrypt/write")
-
-		return err
+		return fmt.Errorf("Could not encrypt/write: %s", err)
 	}
 
 	if err := c.Close(); err != nil {
@@ -246,37 +228,28 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, privateKeyPath, backupTar, c4ghP
 
 	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not retrieve private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve private key: %s", err)
 	}
 
 	log.Debug("Private key retrieved")
 
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
-
-		return err
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 
 	log.Debug("Decryption initialized")
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 
 	log.Debug("Decompression initialized")
 
 	_, err = io.Copy(localTar, d)
 	if err != nil {
-		log.Errorf("Error in copying file")
-
-		return err
+		return fmt.Errorf("Error in copying file: %s", err)
 	}
 
 	log.Debug("Data copied")
@@ -318,37 +291,28 @@ func (db DBConf) restore(sb s3Backend, privateKeyPath, sqlDump, c4ghPassword str
 
 	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not retrieve private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve private key: %s", err)
 	}
 
 	log.Debug("Private key retrieved")
 
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
-
-		return err
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 
 	log.Debug("Decryption initialized")
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 
 	log.Debug("Decompression initialized")
 
 	data, err := io.ReadAll(d)
 	if err != nil {
-		log.Error("Could not read all data")
-
-		return err
+		return fmt.Errorf("Could not read all data: %s", err)
 	}
 
 	if err := d.Close(); err != nil {
