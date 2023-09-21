@@ -91,18 +91,15 @@ func (mongo mongoConfig) dump(sb s3Backend, publicKeyPath, database string) erro
 		return err
 	}
 
-	err = c.Close()
-	if err != nil {
+	if err := c.Close(); err != nil {
 		log.Errorf("Could not close compressor: %v", err)
 	}
 
-	err = e.Close()
-	if err != nil {
+	if err := e.Close(); err != nil {
 		log.Errorf("Could not close encryptor: %v", err)
 	}
 
-	err = wr.Close()
-	if err != nil {
+	if err := wr.Close(); err != nil {
 		log.Errorf("Could not close destination file: %v", err)
 	}
 	wg.Wait()
@@ -165,13 +162,11 @@ func (mongo mongoConfig) restore(sb s3Backend, privateKeyPath, archive, c4ghPass
 
 	}
 
-	err = d.Close()
-	if err != nil {
+	if err := d.Close(); err != nil {
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
-	err = r.Close()
-	if err != nil {
+	if err := r.Close(); err != nil {
 		log.Errorf("Could not close decryptor: %v", err)
 	}
 

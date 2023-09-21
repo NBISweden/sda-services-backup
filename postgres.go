@@ -125,8 +125,7 @@ func (db DBConf) basebackup(sb s3Backend, publicKeyPath string) error {
 		log.Errorf("Could not close compressor: %v", err)
 	}
 
-	err = e.Close()
-	if err != nil {
+	if err := e.Close(); err != nil {
 		log.Errorf("Could not close encryptor: %v", err)
 	}
 
@@ -205,18 +204,15 @@ func (db DBConf) dump(sb s3Backend, publicKeyPath string) error {
 		return err
 	}
 
-	err = c.Close()
-	if err != nil {
+	if err := c.Close(); err != nil {
 		log.Errorf("Could not close compressor: %v", err)
 	}
 
-	err = e.Close()
-	if err != nil {
+	if err := e.Close(); err != nil {
 		log.Errorf("Could not close encryptor: %v", err)
 	}
 
-	err = wr.Close()
-	if err != nil {
+	if err := wr.Close(); err != nil {
 		log.Errorf("Could not close destination file: %v", err)
 	}
 	wg.Wait()
@@ -301,8 +297,7 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, privateKeyPath, backupTar, c4ghP
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
-	err = r.Close()
-	if err != nil {
+	if err := r.Close(); err != nil {
 		log.Errorf("Could not close decryptor: %v", err)
 	}
 
@@ -356,13 +351,11 @@ func (db DBConf) restore(sb s3Backend, privateKeyPath, sqlDump, c4ghPassword str
 		return err
 	}
 
-	err = d.Close()
-	if err != nil {
+	if err := d.Close(); err != nil {
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
-	err = r.Close()
-	if err != nil {
+	if err := r.Close(); err != nil {
 		log.Errorf("Could not close decryptor: %v", err)
 	}
 

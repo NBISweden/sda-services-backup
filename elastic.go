@@ -292,18 +292,15 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 			log.Trace("IDs     ", gjson.Get(hits.Raw, "#._id"))
 			log.Trace(strings.Repeat("-", 80))
 		}
-		err = c.Close()
-		if err != nil {
+		if err := c.Close(); err != nil {
 			log.Errorf("Could not close compressor: %v", err)
 		}
 
-		err = e.Close()
-		if err != nil {
+		if err := e.Close(); err != nil {
 			log.Errorf("Could not close encryptor: %v", err)
 		}
 
-		err = wr.Close()
-		if err != nil {
+		if err =: wr.Close();  err != nil {
 			log.Errorf("Could not close destination file: %v", err)
 		}
 		wg.Wait()
@@ -357,13 +354,11 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 		return err
 	}
 
-	err = d.Close()
-	if err != nil {
+	if err := d.Close(); err != nil {
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
-	err = r.Close()
-	if err != nil {
+	if err := r.Close(); err != nil {
 		log.Errorf("Could not close decryptor: %v", err)
 	}
 
