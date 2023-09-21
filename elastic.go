@@ -300,7 +300,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 			log.Errorf("Could not close encryptor: %v", err)
 		}
 
-		if err =: wr.Close();  err != nil {
+		if err := wr.Close(); err != nil {
 			log.Errorf("Could not close destination file: %v", err)
 		}
 		wg.Wait()
