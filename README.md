@@ -16,9 +16,19 @@ ENVs will overrule values set in the config file
 
 For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
 
-## Create a key
+## Create a crypt4gh key pair
 
-The encryption key should be in `aes-256-gcm` format and needs to be passed as as bas64 encoded string in a file
+The key pair can be created using the `crypt4gh` tool
+
+### Golang verison
+```shell
+crypt4gh -n "key-name" -p "passphrase"
+```
+
+### Python version
+```shell
+crypt4gh-keygen --sk private-key.sec.pem --pk public-key.pub.pem
+```
 
 ## Elasticsearch
 
@@ -128,7 +138,9 @@ Again here a docker container is used for the same reason explained in the `Pg_b
 ## Example configuration file
 
 ```yaml
-encryptionKey: "aes256.key"
+crypt4ghPublicKey: "publicKey.pub.pem"
+crypt4ghPrivateKey: "privateKey.sec.pem"
+crypt4ghPassphrase: ""
 loglevel: debug
 s3:
   url: "FQDN URI" #https://s3.example.com

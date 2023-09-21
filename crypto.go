@@ -1,103 +1,90 @@
 package main
 
 import (
-	"crypto/aes"
-	"crypto/cipher"
-	"crypto/rand"
-	"encoding/base64"
-	"fmt"
 	"io"
 	"os"
 
+	"github.com/neicnordic/crypt4gh/keys"
+	"github.com/neicnordic/crypt4gh/streaming"
 	log "github.com/sirupsen/logrus"
 )
 
-func getKey(path string) []byte {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		log.Fatalf("Could not load cipher key: %s", err)
-	}
-	decodedkey, err := base64.StdEncoding.DecodeString(string(data))
-	if err != nil {
-		log.Fatalf("Could not decode base64 key: %s", err)
-	}
-
-	return decodedkey
-}
-
-type encryptor struct {
-	stream cipher.Stream
-	w      io.Writer
-}
-
-type decryptor struct {
-	stream cipher.Stream
-	r      io.Reader
-}
-
-func newDecryptor(key []byte, r io.Reader) (*decryptor, error) {
-	iv := make([]byte, aes.BlockSize)
-	_, err := io.ReadFull(r, iv)
-
+// Function for generating a crypt4gh private key
+// which will be used for encrypting
+func generatePrivateKey() (*[32]byte, error) {
+	_, privateKey, err := keys.GenerateKeyPair()
 	if err != nil {
 		return nil, err
 	}
 
-	block, err := aes.NewCipher(key)
+	return &privateKey, nil
+}
+
+// Function for getting the public key which is given in the config file
+// and the private key which is generated on the fly and not stored.
+// Returns the generated private key and a list with the public key
+// in order to encrypt the file.
+func getKeys(path string) ([32]byte, [][32]byte, error) {
+	privateKeyData, err := generatePrivateKey()
+	if err != nil {
+		log.Debug("Could not generate private key")
+
+		return [32]byte{}, nil, err
+	}
+
+	publicKey, err := os.Open(path)
+	if err != nil {
+		log.Debug("Could not open public key")
+
+		return [32]byte{}, nil, err
+	}
+	publicKeyData, err := keys.ReadPublicKey(publicKey)
+	if err != nil {
+		log.Debug("Could not load public key")
+
+		return [32]byte{}, nil, err
+	}
+
+	var publicKeyFileList [][32]byte
+	publicKeyFileList = append(publicKeyFileList, publicKeyData)
+
+	return *privateKeyData, publicKeyFileList, nil
+}
+
+// Function for retrieving the private key (for decrypting) which is given in the config file
+func getPrivateKey(path, password string) ([32]byte, error) {
+	privateKey, err := os.Open(path)
+	if err != nil {
+		log.Debug("Could not open private key")
+
+		return [32]byte{}, err
+	}
+
+	privateKeyData, err := keys.ReadPrivateKey(privateKey, []byte(password))
+	if err != nil {
+		log.Debug("Could not load private key")
+
+		return [32]byte{}, err
+	}
+
+	return privateKeyData, nil
+}
+
+func newDecryptor(privateKey [32]byte, r io.Reader) (*streaming.Crypt4GHReader, error) {
+	crypt4GHReader, err := streaming.NewCrypt4GHReader(r, privateKey, nil)
 	if err != nil {
 		return nil, err
 	}
-	stream := cipher.NewCFBDecrypter(block, iv)
 
-	return &decryptor{
-		stream: stream,
-		r:      r,
-	}, nil
+	return crypt4GHReader, nil
 }
 
-func (d *decryptor) Read(p []byte) (n int, err error) {
-	b := make([]byte, len(p))
-	n, err = d.r.Read(b)
-	if n == 0 {
-		return n, err
-	}
-	d.stream.XORKeyStream(p, b)
+func newEncryptor(pubKeyList [][32]byte, privateKey [32]byte, w io.Writer) (*streaming.Crypt4GHWriter, error) {
 
-	return n, err
-}
-
-func newEncryptor(key []byte, w io.Writer) (*encryptor, error) {
-	block, err := aes.NewCipher(key)
+	crypt4GHWriter, err := streaming.NewCrypt4GHWriter(w, privateKey, pubKeyList, nil)
 	if err != nil {
 		return nil, err
 	}
-	iv := make([]byte, aes.BlockSize)
 
-	if _, err := io.ReadFull(rand.Reader, iv); err != nil {
-		return nil, err
-	}
-
-	stream := cipher.NewCFBEncrypter(block, iv)
-
-	l, err := w.Write(iv)
-
-	if err != nil {
-		return nil, err
-	}
-	if l != len(iv) {
-		return nil, fmt.Errorf("Ecnryptor, failed to write iv")
-	}
-
-	return &encryptor{
-		stream: stream,
-		w:      w,
-	}, nil
-}
-
-func (e *encryptor) Write(p []byte) (n int, err error) {
-	b := make([]byte, len(p))
-	e.stream.XORKeyStream(b, p)
-	n, err = e.w.Write(b)
-
-	return
+	return crypt4GHWriter, nil
 }

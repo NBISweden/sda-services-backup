@@ -38,42 +38,42 @@ func main() {
 
 	switch flags.action {
 	case "es_backup":
-		err := elastic.backupDocuments(sb, conf.keyPath, flags.name)
+		err := elastic.backupDocuments(sb, conf.publicKeyPath, flags.name)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "es_restore":
-		err := elastic.restoreDocuments(sb, conf.keyPath, flags.name)
+		err := elastic.restoreDocuments(sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "mongo_dump":
-		err := mongo.dump(*sb, conf.keyPath, flags.name)
+		err := mongo.dump(*sb, conf.publicKeyPath, flags.name)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "mongo_restore":
-		err := mongo.restore(*sb, conf.keyPath, flags.name)
+		err := mongo.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "pg_dump":
-		err := pg.dump(*sb, conf.keyPath)
+		err := pg.dump(*sb, conf.publicKeyPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "pg_restore":
-		err := pg.restore(*sb, conf.keyPath, flags.name)
+		err := pg.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "pg_basebackup":
-		err := pg.basebackup(*sb, conf.keyPath)
+		err := pg.basebackup(*sb, conf.publicKeyPath)
 		if err != nil {
 			log.Fatal(err)
 		}
 	case "pg_db-unpack":
-		err := pg.baseBackupUnpack(*sb, conf.keyPath, flags.name)
+		err := pg.baseBackupUnpack(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -33,7 +33,7 @@ type DBConf struct {
 // - compresses the encrypted file
 // - gets the key and encrypts the tar file
 // - puts the encrypted and compressed file in S3
-func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
+func (db DBConf) basebackup(sb s3Backend, publicKeyPath string) error {
 	log.Info("Basebackup started")
 	today := time.Now().Format("20060102150405")
 	destDir := "db-backup"
@@ -76,28 +76,28 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	wg := sync.WaitGroup{}
 	wr, err := sb.NewFileWriter(fileName, &wg)
 	if err != nil {
-		log.Error("Could not open backup file for writing")
-
-		return err
+		return fmt.Errorf("Could not open backup file for writing: %s", err)
 	}
 
 	log.Debugf("Backup file %v ready for writing", fileName)
 
-	key := getKey(keyPath)
-	e, err := newEncryptor(key, wr)
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
-		log.Error("Could not initialize encryptor")
+		return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
+	}
 
-		return err
+	log.Debug("Public key retrieved and private key successfully created")
+
+	e, err := newEncryptor(publicKeyList, privateKey, wr)
+	if err != nil {
+		return fmt.Errorf("Could not initialize encryptor: %s", err)
 	}
 
 	log.Debug("Encryption initialized")
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Error("Could not initialize compressor")
-
-		return err
+		return fmt.Errorf("Could not initialize compressor: %s", err)
 	}
 
 	log.Debug("Compression initialized")
@@ -117,6 +117,10 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 		log.Errorf("Could not close compressor: %v", err)
 	}
 
+	if err := e.Close(); err != nil {
+		log.Errorf("Could not close encryptor: %v", err)
+	}
+
 	err = wr.Close()
 	if err != nil {
 		log.Errorf("Could not close destination file: %v", err)
@@ -128,7 +132,7 @@ func (db DBConf) basebackup(sb s3Backend, keyPath string) error {
 	return nil
 }
 
-func (db DBConf) dump(sb s3Backend, keyPath string) error {
+func (db DBConf) dump(sb s3Backend, publicKeyPath string) error {
 	log.Info("Dump backup started")
 	today := time.Now().Format("20060102150405")
 	dbURI := buildConnInfo(db)
@@ -151,41 +155,48 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 	dumpFile := today + "-" + db.database + ".sqldump"
 	wr, err := sb.NewFileWriter(dumpFile, &wg)
 	if err != nil {
-		log.Error("Could not open backup file for writing")
-
-		return err
+		return fmt.Errorf("Could not open backup file for writing: %s", err)
 	}
 
 	log.Debugf("Dump file %v ready for writing", dumpFile)
 
-	key := getKey(keyPath)
-	e, err := newEncryptor(key, wr)
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
-		log.Error("Could not initialize encryptor")
+		return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
+	}
 
-		return err
+	log.Debug("Public key retrieved and private key successfully created")
+
+	e, err := newEncryptor(publicKeyList, privateKey, wr)
+	if err != nil {
+		return fmt.Errorf("Could not initialize encryptor: %s", err)
 	}
 
 	log.Debug("Encryption initialized")
 
 	c, err := newCompressor(e)
 	if err != nil {
-		log.Error("Could not initialize compressor")
-
-		return err
+		return fmt.Errorf("Could not initialize compressor: %s", err)
 	}
 
 	log.Debug("Compression initialized")
 
 	_, err = c.Write(out.Bytes())
 	if err != nil {
-		log.Error("Could not encrypt/write")
-
-		return err
+		return fmt.Errorf("Could not encrypt/write: %s", err)
 	}
 
-	c.Close()
-	wr.Close()
+	if err := c.Close(); err != nil {
+		log.Errorf("Could not close compressor: %v", err)
+	}
+
+	if err := e.Close(); err != nil {
+		log.Errorf("Could not close encryptor: %v", err)
+	}
+
+	if err := wr.Close(); err != nil {
+		log.Errorf("Could not close destination file: %v", err)
+	}
 	wg.Wait()
 
 	log.Info("Dump data are compressed and encrypted")
@@ -198,7 +209,7 @@ func (db DBConf) dump(sb s3Backend, keyPath string) error {
 // - decrypts and decompress the data
 // - untar the data
 // - puts the db copy in the running container
-func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error {
+func (db DBConf) baseBackupUnpack(sb s3Backend, privateKeyPath, backupTar, c4ghPassword string) error {
 	log.Info("Unpacking basebackup data started")
 	localTar, err := os.Create("/home/backup.tar")
 	if err != nil {
@@ -215,31 +226,30 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 
 	log.Debug("Data ready for unpacking")
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
+		return fmt.Errorf("Could not retrieve private key: %s", err)
+	}
 
-		return err
+	log.Debug("Private key retrieved")
+
+	r, err := newDecryptor(privateKey, fr)
+	if err != nil {
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 
 	log.Debug("Decryption initialized")
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 
 	log.Debug("Decompression initialized")
 
 	_, err = io.Copy(localTar, d)
 	if err != nil {
-		log.Errorf("Error in copying file")
-
-		return err
+		return fmt.Errorf("Error in copying file: %s", err)
 	}
 
 	log.Debug("Data copied")
@@ -260,12 +270,16 @@ func (db DBConf) baseBackupUnpack(sb s3Backend, keyPath, backupTar string) error
 		log.Errorf("Could not close decompressor: %v", err)
 	}
 
+	if err := r.Close(); err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
+	}
+
 	log.Info("Data copied succesfully")
 
 	return nil
 }
 
-func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
+func (db DBConf) restore(sb s3Backend, privateKeyPath, sqlDump, c4ghPassword string) error {
 	log.Info("Start importing dump file")
 	fr, err := sb.NewFileReader(sqlDump)
 	if err != nil {
@@ -275,33 +289,39 @@ func (db DBConf) restore(sb s3Backend, keyPath, sqlDump string) error {
 
 	log.Debug("Read dump file")
 
-	key := getKey(keyPath)
-	r, err := newDecryptor(key, fr)
+	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
+		return fmt.Errorf("Could not retrieve private key: %s", err)
+	}
 
-		return err
+	log.Debug("Private key retrieved")
+
+	r, err := newDecryptor(privateKey, fr)
+	if err != nil {
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 
 	log.Debug("Decryption initialized")
 
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 
 	log.Debug("Decompression initialized")
 
 	data, err := io.ReadAll(d)
 	if err != nil {
-		log.Error("Could not read all data")
-
-		return err
+		return fmt.Errorf("Could not read all data: %s", err)
 	}
-	d.Close()
+
+	if err := d.Close(); err != nil {
+		log.Errorf("Could not close decompressor: %v", err)
+	}
+
+	if err := r.Close(); err != nil {
+		log.Errorf("Could not close decryptor: %v", err)
+	}
 
 	log.Debug("Data read successfully")
 
