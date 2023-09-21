@@ -177,9 +177,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 	targetIndices, err := findIndices(es, indexGlob)
 
 	if err != nil {
-		log.Error("Could not find indices to fetch")
-
-		return err
+		return fmt.Errorf("Could not find indices to fetch: %s", err)
 	}
 
 	for _, index := range targetIndices {
@@ -194,9 +192,8 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 
 		privateKey, publicKeyList, err := getKeys(publicKeyPath)
 		if err != nil {
-			log.Error("Could not retrieve public key or generate private key")
+			return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
 
-			return err
 		}
 
 		log.Debug("Public key retrieved and private key successfully created")
@@ -204,25 +201,19 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		e, err := newEncryptor(publicKeyList, privateKey, wr)
 
 		if err != nil {
-			log.Error("Could not initialize encryptor")
-
-			return err
+			return fmt.Errorf("Could not initialize encryptor: %s", err)
 		}
 
 		c, err := newCompressor(e)
 
 		if err != nil {
-			log.Error("Could not initialize encryptor")
-
-			return err
+			return fmt.Errorf("Could not initialize encryptor: %s", err)
 		}
 
 		_, err = es.client.Indices.Refresh(es.client.Indices.Refresh.WithIndex(index))
 
 		if err != nil {
-			log.Error("Could not refresh indexes")
-
-			return err
+			return fmt.Errorf("Could not refresh indexes: %s", err)
 		}
 
 		res, err := es.client.Search(
@@ -242,9 +233,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		hits := gjson.Get(json, "hits.hits")
 		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
-			log.Error("Could not encrypt/write")
-
-			return err
+			return fmt.Errorf("Could not encrypt/write: %s", err)
 		}
 
 		log.Debug("Batch   ", batchNum)
@@ -262,9 +251,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 				return err
 			}
 			if res.IsError() {
-				log.Error("Error response")
-
-				return err
+				return fmt.Errorf("Error response: %s", err)
 			}
 
 			json = readResponse(res.Body)
@@ -283,9 +270,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 
 			_, err = c.Write([]byte(hits.Raw + "\n"))
 			if err != nil {
-				log.Error("Could not encrypt/write")
-
-				return err
+				return fmt.Errorf("Could not encrypt/write: %s", err)
 			}
 			log.Debug("Batch   ", batchNum)
 			log.Trace("ScrollID", scrollID)
@@ -327,31 +312,22 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 
 	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		log.Error("Could not retrieve private key")
-
-		return err
+		return fmt.Errorf("Could not retrieve private key: %s", err)
 	}
 
 	log.Debug("Private key retrieved")
 
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
-		log.Error("Could not initialise decryptor")
-
-		return err
+		return fmt.Errorf("Could not initialise decryptor: %s", err)
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
-		log.Error("Could not initialise decompressor")
-
-		return err
-
+		return fmt.Errorf("Could not initialise decompressor: %s", err)
 	}
 	data, err := io.ReadAll(d)
 	if err != nil {
-		log.Error("Could not read all data")
-
-		return err
+		return fmt.Errorf("Could not read all data: %s", err)
 	}
 
 	if err := d.Close(); err != nil {
@@ -373,9 +349,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 		FlushInterval: 30 * time.Second,
 	})
 	if err != nil {
-		log.Error("Unexpected error")
-
-		return err
+		return fmt.Errorf("Unexpected error: %s", err)
 	}
 	defer bi.Close(context.Background())
 
@@ -412,9 +386,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 				},
 			)
 			if err != nil {
-				log.Error("Unexpected error")
-
-				return err
+				return fmt.Errorf("Unexpected error: %s", err)
 			}
 			i++
 		}
