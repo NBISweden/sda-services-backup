@@ -129,31 +129,31 @@ func (es esClient) countDocuments(indexName string) error {
 }
 
 func findIndices(es esClient, indexGlob string) ([]string, error) {
-
 	log.Infoln("Finding indices to fetch...")
 	log.Infoln(strings.Repeat("-", 80))
 
 	catObj := es.client.Cat.Indices
 	cr, err := es.client.Cat.Indices(catObj.WithIndex(indexGlob), catObj.WithFormat("JSON"), catObj.WithH("index"))
-
 	if err != nil {
 		log.Error(err)
+
+		return nil, err
 	}
+	defer cr.Body.Close()
 
 	json := readResponse(cr.Body)
-	cr.Body.Close()
-
 	result := gjson.Get(json, "#.index")
 
 	var indices []string
 	for _, index := range result.Array() {
 		indices = append(indices, index.String())
 	}
-
+	if len(indices) == 0 {
+		return nil, fmt.Errorf("no indices found")
+	}
 	log.Debugf("Found indices: %v", indices)
 
 	return indices, err
-
 }
 
 func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob string) error {
