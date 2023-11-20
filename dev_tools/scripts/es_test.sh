@@ -20,6 +20,13 @@ if [ $? != 0 ]; then
   exit 1
 fi
 
+# check that we fail on non existing index
+echo "checking for non existing index"
+if CONFIGFILE="dev_tools/config_elastic.yaml" go run . --action es_backup --name "*Foo*"; then
+  echo "Failure was expected here"
+  exit 1
+fi
+
 s3cmd ls -c dev_tools/s3conf s3://dumps/
 
 CONFIGFILE="dev_tools/config_elastic.yaml" ELASTIC_PORT=9201 go run . --action es_restore --name "$NOW-123.bup"
