@@ -109,7 +109,6 @@ func readResponse(r io.Reader) string {
 }
 
 func (es esClient) countDocuments(indexName string) error {
-
 	log.Infoln("Couting documents to fetch...")
 	log.Infoln(strings.Repeat("-", 80))
 	cr, err := es.client.Count(es.client.Count.WithIndex(indexName))
@@ -175,9 +174,8 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 	}
 
 	targetIndices, err := findIndices(es, indexGlob)
-
 	if err != nil {
-		return fmt.Errorf("Could not find indices to fetch: %s", err)
+		return err
 	}
 
 	for _, index := range targetIndices {
@@ -192,7 +190,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 
 		privateKey, publicKeyList, err := getKeys(publicKeyPath)
 		if err != nil {
-			return fmt.Errorf("Could not retrieve public key or generate private key: %s", err)
+			return fmt.Errorf("could not retrieve public key or generate private key: %s", err)
 
 		}
 
@@ -201,19 +199,19 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		e, err := newEncryptor(publicKeyList, privateKey, wr)
 
 		if err != nil {
-			return fmt.Errorf("Could not initialize encryptor: %s", err)
+			return fmt.Errorf("could not initialize encryptor: %s", err)
 		}
 
 		c, err := newCompressor(e)
 
 		if err != nil {
-			return fmt.Errorf("Could not initialize encryptor: %s", err)
+			return fmt.Errorf("could not initialize encryptor: %s", err)
 		}
 
 		_, err = es.client.Indices.Refresh(es.client.Indices.Refresh.WithIndex(index))
 
 		if err != nil {
-			return fmt.Errorf("Could not refresh indexes: %s", err)
+			return fmt.Errorf("could not refresh indexes: %s", err)
 		}
 
 		res, err := es.client.Search(
@@ -233,7 +231,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		hits := gjson.Get(json, "hits.hits")
 		_, err = c.Write([]byte(hits.Raw + "\n"))
 		if err != nil {
-			return fmt.Errorf("Could not encrypt/write: %s", err)
+			return fmt.Errorf("could not encrypt/write: %s", err)
 		}
 
 		log.Debug("Batch   ", batchNum)
@@ -251,7 +249,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 				return err
 			}
 			if res.IsError() {
-				return fmt.Errorf("Error response: %s", err)
+				return fmt.Errorf("error response: %s", err)
 			}
 
 			json = readResponse(res.Body)
@@ -270,7 +268,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 
 			_, err = c.Write([]byte(hits.Raw + "\n"))
 			if err != nil {
-				return fmt.Errorf("Could not encrypt/write: %s", err)
+				return fmt.Errorf("could not encrypt/write: %s", err)
 			}
 			log.Debug("Batch   ", batchNum)
 			log.Trace("ScrollID", scrollID)
@@ -278,15 +276,15 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 			log.Trace(strings.Repeat("-", 80))
 		}
 		if err := c.Close(); err != nil {
-			log.Errorf("Could not close compressor: %v", err)
+			log.Errorf("could not close compressor: %v", err)
 		}
 
 		if err := e.Close(); err != nil {
-			log.Errorf("Could not close encryptor: %v", err)
+			log.Errorf("could not close encryptor: %v", err)
 		}
 
 		if err := wr.Close(); err != nil {
-			log.Errorf("Could not close destination file: %v", err)
+			log.Errorf("could not close destination file: %v", err)
 		}
 		wg.Wait()
 	}
@@ -312,30 +310,30 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 
 	privateKey, err := getPrivateKey(privateKeyPath, c4ghPassword)
 	if err != nil {
-		return fmt.Errorf("Could not retrieve private key: %s", err)
+		return fmt.Errorf("could not retrieve private key: %s", err)
 	}
 
 	log.Debug("Private key retrieved")
 
 	r, err := newDecryptor(privateKey, fr)
 	if err != nil {
-		return fmt.Errorf("Could not initialise decryptor: %s", err)
+		return fmt.Errorf("could not initialise decryptor: %s", err)
 	}
 	d, err := newDecompressor(r)
 	if err != nil {
-		return fmt.Errorf("Could not initialise decompressor: %s", err)
+		return fmt.Errorf("could not initialise decompressor: %s", err)
 	}
 	data, err := io.ReadAll(d)
 	if err != nil {
-		return fmt.Errorf("Could not read all data: %s", err)
+		return fmt.Errorf("could not read all data: %s", err)
 	}
 
 	if err := d.Close(); err != nil {
-		log.Errorf("Could not close decompressor: %v", err)
+		log.Errorf("could not close decompressor: %v", err)
 	}
 
 	if err := r.Close(); err != nil {
-		log.Errorf("Could not close decryptor: %v", err)
+		log.Errorf("could not close decryptor: %v", err)
 	}
 
 	ud := string(data)
@@ -349,7 +347,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 		FlushInterval: 30 * time.Second,
 	})
 	if err != nil {
-		return fmt.Errorf("Unexpected error: %s", err)
+		return fmt.Errorf("unexpected error: %s", err)
 	}
 	defer bi.Close(context.Background())
 
@@ -386,7 +384,7 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 				},
 			)
 			if err != nil {
-				return fmt.Errorf("Unexpected error: %s", err)
+				return fmt.Errorf("unexpected error: %s", err)
 			}
 			i++
 		}
