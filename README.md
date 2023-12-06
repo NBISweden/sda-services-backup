@@ -177,3 +177,85 @@ mongo:
   #cacert: "path/to/ca-root" #optional
   #clientcert: "path/to/clientcert" # needed if tls=true
 ```
+
+## Example configuration in terraform 
+
+This is configuration example to deploy sda-backup-services on kubernetes pod using terraform.
+
+```bash
+resource "kubernetes_secret_v1" "backup-secret" {
+  metadata {
+    name      = "backup-secret"
+    namespace = "namespace"
+  }
+  data = {
+    "key.pub.pem" =  "Crypt4gh public key from vault",
+    "key.sec.pe," = "Crypt4gh private key from vault",
+    "config.yaml" = yamlencode({
+      # configuring path to where keys will be mounted
+      "crypt4ghPublicKey" : "/.keys/key.pub.pem",
+      "crypt4ghPrivateKey" :"/.keys/key.sec.pem",
+      "crypt4ghPassphrase" : "your passphrase"
+      "loglevel": "debug",
+      "db" : {
+        "host" : "IP address of DB or name",
+        "user" : "postgres",
+        "password" : "password",
+        "database" : "postgres",
+        "sslmode" : "disable",
+        "cacert": "path/to/ca-root",
+        "clientcert": "path/to/clientcert", #only needed if sslmode = verify-peer
+        "clientkey": "path/to/clientkey" #only needed if sslmode = verify-peer
+        "sslmode": "verify-peer" 
+      },
+      "s3" : {
+        "url": "FQDN URI" #https://s3.example.com
+        #"port": "9000" #only needed if the port difers from the standard HTTP/HTTPS ports
+       "accesskey": "accesskey"
+       "secretkey": "secret-accesskey"
+       "bucket": "bucket-name"
+       #"cacert": "path/to/ca-root"
+      },
+      "elastic":{
+      "host": "FQDN URI" # https://es.example.com
+      #port: 9200 # only needed if the port difers from the standard HTTP/HTTPS ports
+      "user": "elastic-user"
+      "password": "elastic-password"
+      #cacert: "path/to/ca-root"
+      "batchSize": "50" # How many documents to retrieve from elastic search at a time, default 50 (should probably be at least 2000
+      "filePrefix": "" # Can be emtpy string, useful in case an index has been written to and you want to backup a new copy
+      },
+      "mongo":{
+       "host": "hostname or IP with portnuber" #example.com:portnumber, 127.0.0.1:27017
+      "user": "backup"
+      "password": "backup"
+      "authSource": "admin"
+      "replicaset": ""
+     #"tls": "true"
+     #"cacert": "path/to/ca-root" #optional
+     #"clientcert": "path/to/clientcert" # needed if tls=true
+      }
+    })
+  }
+}
+```
+
+### Mounting crypt4gh keys
+
+Ensure that you mount the volume containing the "crypt4ghPublicKey" and "crypt4ghPrivateKey" files with the same paths as "key.pub.pem" and "key.sec.pem.
+
+Below example is terraform config to mount keys onto kubernetes pod.
+```bash
+   volume_mount {
+     name       = "name"
+     mount_path = "/.keys/key.pub.pem"
+     sub_path   = "key.pub.pem"
+   }
+   volume_mount {
+     name       = "name"
+     mount_path = "/.keys/key.sec.pem"
+     sub_path   = "key.sec.pem"
+   }
+```
+
+
