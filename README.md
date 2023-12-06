@@ -180,7 +180,7 @@ mongo:
 
 ## Example configuration in terraform 
 
-This is configuration example to deploy sda-backup-services on kubernetes pod using terraform.
+This is configuration example to deploy sda-services-backup on kubernetes pod using terraform.
 
 ```bash
 resource "kubernetes_secret_v1" "backup-secret" {
@@ -190,7 +190,7 @@ resource "kubernetes_secret_v1" "backup-secret" {
   }
   data = {
     "key.pub.pem" =  "Crypt4gh public key from vault",
-    "key.sec.pe," = "Crypt4gh private key from vault",
+    "key.sec.pem," = "Crypt4gh private key from vault",
     "config.yaml" = yamlencode({
       # configuring path to where keys will be mounted
       "crypt4ghPublicKey" : "/.keys/key.pub.pem",
