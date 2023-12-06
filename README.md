@@ -242,10 +242,15 @@ resource "kubernetes_secret_v1" "backup-secret" {
 
 ### Mounting crypt4gh keys
 
-Ensure that you mount the volume containing the "crypt4ghPublicKey" and "crypt4ghPrivateKey" files with the same paths as "key.pub.pem" and "key.sec.pem.
+Below example is terraform config to mount "config.yaml" and keys onto kubernetes pod.
 
-Below example is terraform config to mount keys onto kubernetes pod.
+Ensure that you mount the volume containing the "crypt4ghPublicKey" and "crypt4ghPrivateKey" files with the same paths as "key.pub.pem" and "key.sec.pem.
 ```bash
+volume_mount {
+  name       = "name"
+  mount_path = "/.config/config.yaml"
+  sub_path   = "config.yaml"
+   }
    volume_mount {
      name       = "name"
      mount_path = "/.keys/key.pub.pem"
@@ -257,5 +262,28 @@ Below example is terraform config to mount keys onto kubernetes pod.
      sub_path   = "key.sec.pem"
    }
 ```
+Now, you can add secret to volume using config below
 
+```bash 
+volume {
+      name = "cronjob"
+      projected {
+        default_mode = "0400"
+        sources {
+          secret {
+            name = "backup-secret"
+          }
+        }
+      }
+      }
+```
+
+Finally add path to config file in ENV
+
+```bash 
+  env {
+     name  = "CONFIGFILE"
+     value = "/.config/config.yaml"
+   }
+```
 
