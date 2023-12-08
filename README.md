@@ -266,7 +266,7 @@ Now, you can add secret to volume using config below
 
 ```bash 
 volume {
-      name = "cronjob"
+      name = "name"
       projected {
         default_mode = "0400"
         sources {
