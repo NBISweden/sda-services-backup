@@ -7,7 +7,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/lib/pq v1.10.9
-	github.com/neicnordic/crypt4gh v1.8.4
+	github.com/neicnordic/crypt4gh v1.8.5
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.17.0
@@ -15,7 +15,7 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.0.0 // indirect
+	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/dchest/bcrypt_pbkdf v0.0.0-20150205184540-83f37f9c154a // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
