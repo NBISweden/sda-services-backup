@@ -14,7 +14,9 @@ which holds the full path to the config file.
 All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.
 ENVs will overrule values set in the config file
 
-For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
+For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom. 
+
+For deploying the backup service, see  [example](/examples/)
 
 ## Create a crypt4gh key pair
 
@@ -177,113 +179,3 @@ mongo:
   #cacert: "path/to/ca-root" #optional
   #clientcert: "path/to/clientcert" # needed if tls=true
 ```
-
-## Example configuration in terraform 
-
-This is configuration example to deploy sda-services-backup on kubernetes pod using terraform.
-
-```bash
-resource "kubernetes_secret_v1" "backup-secret" {
-  metadata {
-    name      = "backup-secret"
-    namespace = "namespace"
-  }
-  data = {
-    "key.pub.pem" =  "Crypt4gh public key from vault",
-    "key.sec.pem," = "Crypt4gh private key from vault",
-    "config.yaml" = yamlencode({
-      # configuring path to where keys will be mounted
-      "crypt4ghPublicKey" : "/.keys/key.pub.pem",
-      "crypt4ghPrivateKey" :"/.keys/key.sec.pem",
-      "crypt4ghPassphrase" : "your passphrase"
-      "loglevel": "debug",
-      "db" : {
-        "host" : "IP address of DB or name",
-        "user" : "postgres",
-        "password" : "password",
-        "database" : "postgres",
-        "sslmode" : "disable",
-        "cacert": "path/to/ca-root",
-        "clientcert": "path/to/clientcert", #only needed if sslmode = verify-peer
-        "clientkey": "path/to/clientkey" #only needed if sslmode = verify-peer
-        "sslmode": "verify-peer" 
-      },
-      "s3" : {
-        "url": "FQDN URI" #https://s3.example.com
-        #"port": "9000" #only needed if the port difers from the standard HTTP/HTTPS ports
-       "accesskey": "accesskey"
-       "secretkey": "secret-accesskey"
-       "bucket": "bucket-name"
-       #"cacert": "path/to/ca-root"
-      },
-      "elastic":{
-      "host": "FQDN URI" # https://es.example.com
-      #port: 9200 # only needed if the port difers from the standard HTTP/HTTPS ports
-      "user": "elastic-user"
-      "password": "elastic-password"
-      #cacert: "path/to/ca-root"
-      "batchSize": "50" # How many documents to retrieve from elastic search at a time, default 50 (should probably be at least 2000
-      "filePrefix": "" # Can be emtpy string, useful in case an index has been written to and you want to backup a new copy
-      },
-      "mongo":{
-       "host": "hostname or IP with portnuber" #example.com:portnumber, 127.0.0.1:27017
-      "user": "backup"
-      "password": "backup"
-      "authSource": "admin"
-      "replicaset": ""
-     #"tls": "true"
-     #"cacert": "path/to/ca-root" #optional
-     #"clientcert": "path/to/clientcert" # needed if tls=true
-      }
-    })
-  }
-}
-```
-
-### Mounting crypt4gh keys
-
-Below example is terraform config to mount "config.yaml" and keys onto kubernetes pod.
-
-Ensure that you mount the volume containing the "crypt4ghPublicKey" and "crypt4ghPrivateKey" files with the same paths as "key.pub.pem" and "key.sec.pem.
-```bash
-volume_mount {
-  name       = "name"
-  mount_path = "/.config/config.yaml"
-  sub_path   = "config.yaml"
-   }
-   volume_mount {
-     name       = "name"
-     mount_path = "/.keys/key.pub.pem"
-     sub_path   = "key.pub.pem"
-   }
-   volume_mount {
-     name       = "name"
-     mount_path = "/.keys/key.sec.pem"
-     sub_path   = "key.sec.pem"
-   }
-```
-Now, you can add secret to volume using config below
-
-```bash 
-volume {
-      name = "name"
-      projected {
-        default_mode = "0400"
-        sources {
-          secret {
-            name = "backup-secret"
-          }
-        }
-      }
-      }
-```
-
-Finally add path to config file in ENV
-
-```bash 
-  env {
-     name  = "CONFIGFILE"
-     value = "/.config/config.yaml"
-   }
-```
-
