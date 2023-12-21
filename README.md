@@ -14,7 +14,9 @@ which holds the full path to the config file.
 All parts of the config file can be set as ENVs where the separator is `_` i.e. the S3 accesskey can be set as `S3_ACCESSKEY`.
 ENVs will overrule values set in the config file
 
-For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom
+For a complete example of configuration options see the [example](#Example-configuration-file) at the bottom. 
+
+For deploying the backup service, see  [example](/examples/)
 
 ## Create a crypt4gh key pair
 
