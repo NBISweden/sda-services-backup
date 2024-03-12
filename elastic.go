@@ -371,10 +371,10 @@ func (es *esClient) restoreDocuments(sb *s3Backend, privateKeyPath, fileName, c4
 				esutil.BulkIndexerItem{
 					Action: "index",
 					Body:   strings.NewReader(source),
-					OnSuccess: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem) {
+					OnSuccess: func(context.Context, esutil.BulkIndexerItem, esutil.BulkIndexerResponseItem) {
 						atomic.AddUint64(&countSuccessful, 1)
 					},
-					OnFailure: func(ctx context.Context, item esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
+					OnFailure: func(_ context.Context, _ esutil.BulkIndexerItem, res esutil.BulkIndexerResponseItem, err error) {
 						if err != nil {
 							log.Errorf("Error: %s", err)
 						} else {
