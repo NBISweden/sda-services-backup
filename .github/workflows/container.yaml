@@ -38,7 +38,7 @@ jobs:
       run: bash ./dev_tools/scripts/make_keys.sh
 
     - name: Start virtual infrastructure
-      run: docker-compose -f ./dev_tools/docker-compose.yml up -d --force-recreate
+      run: docker compose -f ./dev_tools/docker-compose.yml up -d --force-recreate
 
     - name: Wait for containers to start
       run: bash ./dev_tools/scripts/readiness.sh
