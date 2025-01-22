@@ -59,29 +59,29 @@ func getCLflags() ClFlags {
 }
 
 // configS3Storage populates a S3Config
-func configS3Storage() S3Config {
+func configS3Storage(prefix string) S3Config {
 	s3 := S3Config{}
-	s3.URL = viper.GetString("s3.url")
-	s3.AccessKey = viper.GetString("s3.accesskey")
-	s3.SecretKey = viper.GetString("s3.secretkey")
-	s3.Bucket = viper.GetString("s3.bucket")
+	s3.URL = viper.GetString(prefix + ".url")
+	s3.AccessKey = viper.GetString(prefix + ".accesskey")
+	s3.SecretKey = viper.GetString(prefix + ".secretkey")
+	s3.Bucket = viper.GetString(prefix + ".bucket")
 	s3.Port = 443
 	s3.Region = "us-east-1"
 
-	if viper.IsSet("s3.port") {
-		s3.Port = viper.GetInt("s3.port")
+	if viper.IsSet(prefix + ".port") {
+		s3.Port = viper.GetInt(prefix + ".port")
 	}
 
-	if viper.IsSet("s3.region") {
-		s3.Region = viper.GetString("s3.region")
+	if viper.IsSet(prefix + ".region") {
+		s3.Region = viper.GetString(prefix + ".region")
 	}
 
-	if viper.IsSet("s3.chunksize") {
-		s3.Chunksize = viper.GetInt("s3.chunksize") * 1024 * 1024
+	if viper.IsSet(prefix + ".chunksize") {
+		s3.Chunksize = viper.GetInt(prefix+".chunksize") * 1024 * 1024
 	}
 
-	if viper.IsSet("s3.cacert") {
-		s3.Cacert = viper.GetString("s3.cacert")
+	if viper.IsSet(prefix + ".cacert") {
+		s3.Cacert = viper.GetString(prefix + ".cacert")
 	}
 
 	return s3
@@ -178,7 +178,7 @@ func configMongoDB() mongoConfig {
 
 func (c *Config) readConfig() {
 
-	c.s3 = configS3Storage()
+	c.s3 = configS3Storage("s3")
 
 	c.db = configPostgres()
 
