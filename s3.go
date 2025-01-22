@@ -165,3 +165,53 @@ func transportConfigS3(config S3Config) http.RoundTripper {
 
 	return trConfig
 }
+
+func BackupS3BuckeEncrypted(source, destination *s3Backend, publicKeyPath string) error {
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
+	if err != nil {
+		return fmt.Errorf("could not retrieve public key or generate private key: %s", err)
+	}
+
+	// list files in src bucket
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	for _, obj := range result.Contents {
+		log.Debugf("copying object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		wr, err := destination.NewFileWriter(fmt.Sprintf("%s.c4gh", *obj.Key), &wg)
+		if err != nil {
+			return fmt.Errorf("could not open backup writer: %s", err)
+		}
+
+		e, err := newEncryptor(publicKeyList, privateKey, wr)
+		if err != nil {
+			return err
+		}
+
+		i, err := io.Copy(e, s.Body)
+		if err != nil {
+			return fmt.Errorf("failed to copy data: %s", err.Error())
+		}
+		log.Debugf("bytes copied: %d", i)
+		e.Close()
+		wr.Close()
+	}
+	wg.Wait()
+
+	return nil
+}
