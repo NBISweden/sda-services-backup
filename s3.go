@@ -22,21 +22,23 @@ import (
 )
 
 type s3Backend struct {
-	Client   *s3.S3
-	Uploader *s3manager.Uploader
-	Bucket   string
+	Client     *s3.S3
+	Uploader   *s3manager.Uploader
+	Bucket     string
+	PathPrefix string
 }
 
 // S3Config stores information about the S3 storage backend
 type S3Config struct {
-	URL       string
-	Port      int
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	Region    string
-	Chunksize int
-	Cacert    string
+	URL        string
+	Port       int
+	AccessKey  string
+	SecretKey  string
+	Bucket     string
+	Region     string
+	Chunksize  int
+	Cacert     string
+	PathPrefix string
 }
 
 func newS3Backend(config S3Config) (*s3Backend, error) {
@@ -73,10 +75,11 @@ func newS3Backend(config S3Config) (*s3Backend, error) {
 		Uploader: s3manager.NewUploader(s3Session, func(u *s3manager.Uploader) {
 			u.LeavePartsOnError = false
 		}),
-		Client: s3.New(s3Session)}
+		Client:     s3.New(s3Session),
+		PathPrefix: config.PathPrefix,
+	}
 
 	_, err = sb.Client.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: &config.Bucket})
-
 	if err != nil {
 		return nil, err
 	}

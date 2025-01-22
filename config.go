@@ -84,6 +84,10 @@ func configS3Storage(prefix string) S3Config {
 		s3.Cacert = viper.GetString(prefix + ".cacert")
 	}
 
+	if viper.IsSet(prefix + ".PathPrefix") {
+		s3.PathPrefix = viper.GetString(prefix + ".PathPrefix")
+	}
+
 	return s3
 }
 
