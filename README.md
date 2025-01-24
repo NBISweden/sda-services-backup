@@ -136,6 +136,33 @@ Again here a docker container is used for the same reason explained in the `Pg_b
 ./backup-svc --action mongo_restore --name MONGO-ARCHIVE-FILE
 ```
 
+## S3 backup
+
+All options needs to be specified in the config file, in the `source` and `destination` S3 config blocks.
+
+### Backing up an S3 bucket
+
+Objects in the `source` bucket will be encrypted using cryp4gh before they are placed in the destination bucket. A subset of files from A can be selected using the `prefix` option, to select objects that start with a specific string or path.
+
+```cmd
+./backup-svc --action backup_bucket
+```
+
+### Restoring an encrypred S3 bucket backup
+
+Objects in the `source` bucket will be decrypted using cryp4gh before they are placed in the destination bucket. A subset of files from A can be selected using the `prefix` option, to select objects that start with a specific string or path.
+
+```cmd
+./backup-svc --action restore_bucket
+```
+
+### Syncing two S3 buckets
+
+This performs an unencrypted sync from bucket A to bucket B. A subset of files from A can be selected using the `prefix` option, to select objects that start with a specific string or path.
+
+```cmd
+./backup-svc --action sync_buckets
+```
 
 ## Example configuration file
 
@@ -178,4 +205,22 @@ mongo:
   #tls: true
   #cacert: "path/to/ca-root" #optional
   #clientcert: "path/to/clientcert" # needed if tls=true
+
+################
+# S3 to S3 backup
+source:
+  url: "FQDN URI" #https://s3.example.com
+  #port: 9000 #only needed if the port difers from the standard HTTP/HTTPS ports
+  accesskey: "accesskey"
+  secretkey: "secret-accesskey"
+  bucket: "bucket-name"
+  #cacert: "path/to/ca-root"
+  prefix: "sub/path/" # used to backup a selected path from an S3 bucket
+destination:
+  url: "FQDN URI" #https://s3.example.com
+  #port: 9000 #only needed if the port difers from the standard HTTP/HTTPS ports
+  accesskey: "accesskey"
+  secretkey: "secret-accesskey"
+  bucket: "bucket-name"
+  #cacert: "path/to/ca-root"
 ```
