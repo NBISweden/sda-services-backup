@@ -279,3 +279,36 @@ func RestoreEncryptedS3Bucket(source, destination *s3Backend, passphrase, privat
 	return nil
 }
 
+func SyncS3Buckets(source, destination *s3Backend) error {
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range result.Contents {
+		log.Debugf("copying object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		_, err = destination.Uploader.Upload(&s3manager.UploadInput{
+			Body:            s.Body,
+			Bucket:          aws.String(destination.Bucket),
+			Key:             obj.Key,
+			ContentEncoding: aws.String("application/octet-stream"),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
