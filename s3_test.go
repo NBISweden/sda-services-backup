@@ -277,3 +277,49 @@ func (suite *S3TestSuite) TestBackupAndRestoreS3BucketSubPathEncrypted() {
 	}
 	assert.Equal(suite.T(), 2, r, "not all objects restored")
 }
+
+func (suite *S3TestSuite) TestSyncS3Buckets() {
+	srcConf := suite.Conf
+	src, err := newS3Backend(srcConf)
+	assert.NoError(suite.T(), err, "failed to create source backend")
+
+	source, err := src.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket:  &src.Bucket,
+		MaxKeys: aws.Int64(100),
+		Prefix:  &src.PathPrefix,
+	})
+	if err != nil {
+		suite.T().Error()
+	}
+	assert.Equal(suite.T(), 5, int(*source.KeyCount))
+
+	dstConf := suite.Conf
+	dstConf.Bucket = "sync"
+	dst, err := newS3Backend(dstConf)
+	if err != nil {
+		suite.T().Logf("failed to create destination backend, reason :%s", err.Error())
+		suite.T().FailNow()
+	}
+	assert.NoError(suite.T(), SyncS3Buckets(src, dst), "failed to sync bucket")
+
+	destination, err := dst.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &dst.Bucket,
+		Prefix: &dst.PathPrefix,
+	})
+	if err != nil {
+		suite.T().Error()
+	}
+	assert.Equal(suite.T(), 5, int(*destination.KeyCount))
+
+	b := 0
+	for _, so := range source.Contents {
+		for _, do := range destination.Contents {
+			if *so.Key == *do.Key && *do.Size == *so.Size {
+				b++
+
+				break
+			}
+		}
+	}
+	assert.Equal(suite.T(), 5, b, "not all objects synced")
+}
