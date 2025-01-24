@@ -1,7 +1,10 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"fmt"
+	"io"
 	"os"
 	"testing"
 
@@ -72,7 +75,14 @@ func (suite *S3TestSuite) SetupSuite() {
 	}
 
 	data, _ := os.MkdirTemp("", "data")
-	if err := os.WriteFile(data+"/file", []byte("637279707434676801000000010000006c000000000000007ca283608311dacfc32703a3cc9a2b445c9a417e036ba5943e233cfc65a1f81fdcc35036a584b3f95759114f584d1e81e8cf23a9b9d1e77b9e8f8a8ee8098c2a3e9270fe6872ef9d1c948caf8423efc7ce391081da0d52a49b1e6d0706f267d6140ff12b"), 0600); err != nil {
+	randomData := new(bytes.Buffer)
+	_, err = io.Copy(randomData, io.LimitReader(rand.Reader, int64(16*1024*1024)))
+	if err != nil {
+		suite.T().Log("failed to write random data")
+		suite.T().FailNow()
+	}
+
+	if err := os.WriteFile(data+"/file", randomData.Bytes(), 0600); err != nil {
 		suite.T().Log("failed to generate data file")
 		suite.T().FailNow()
 	}
