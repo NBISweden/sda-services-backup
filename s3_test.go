@@ -128,7 +128,7 @@ func (suite *S3TestSuite) TestNewBackend() {
 	assert.ErrorContains(suite.T(), err, "connection refused")
 }
 
-func (suite *S3TestSuite) TestBackupS3BucketEncrypted() {
+func (suite *S3TestSuite) TestBackupAndRestoreS3BucketEncrypted() {
 	srcConf := suite.Conf
 	src, err := newS3Backend(srcConf)
 	assert.NoError(suite.T(), err, "failed to create source backend")
@@ -172,9 +172,38 @@ func (suite *S3TestSuite) TestBackupS3BucketEncrypted() {
 		}
 	}
 	assert.Equal(suite.T(), 5, b, "not all objects backedup")
+
+	// test restoreing encrypted backups to a new bucket
+	restConf := suite.Conf
+	restConf.Bucket = "restored"
+	restore, err := newS3Backend(restConf)
+	assert.NoError(suite.T(), err, "failed to create restore backend")
+
+	assert.NoError(suite.T(), RestoreEncryptedS3Bucket(dst, restore, string(suite.Passphrase), suite.PrivateKeyPath), "failed to restore bucket")
+
+	restored, err := restore.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &restore.Bucket,
+		Prefix: &restore.PathPrefix,
+	})
+	if err != nil {
+		suite.T().Error()
+	}
+	assert.Equal(suite.T(), 5, int(*restored.KeyCount))
+
+	r := 0
+	for _, so := range source.Contents {
+		for _, ro := range restored.Contents {
+			if *ro.Key == *so.Key && *so.Size == *ro.Size {
+				r++
+
+				break
+			}
+		}
+	}
+	assert.Equal(suite.T(), 5, r, "not all objects restored")
 }
 
-func (suite *S3TestSuite) TestBackupS3BucketSubPathEncrypted() {
+func (suite *S3TestSuite) TestBackupAndRestoreS3BucketSubPathEncrypted() {
 	srcConf := suite.Conf
 	srcConf.PathPrefix = "foo/bar"
 	src, err := newS3Backend(srcConf)
@@ -210,7 +239,7 @@ func (suite *S3TestSuite) TestBackupS3BucketSubPathEncrypted() {
 	b := 0
 	for _, so := range source.Contents {
 		for _, bo := range backup.Contents {
-			if fmt.Sprintf("%s.c4gh", *so.Key) == *bo.Key {
+			if fmt.Sprintf("%s.c4gh", *so.Key) == *bo.Key && *bo.Size > *so.Size {
 				b++
 
 				break
@@ -218,4 +247,33 @@ func (suite *S3TestSuite) TestBackupS3BucketSubPathEncrypted() {
 		}
 	}
 	assert.Equal(suite.T(), 2, b, "not all objects backedup")
+
+	// test restoreing encrypted backups to a new bucket
+	restConf := suite.Conf
+	restConf.Bucket = "sub"
+	restore, err := newS3Backend(restConf)
+	assert.NoError(suite.T(), err, "failed to create restore backend")
+
+	assert.NoError(suite.T(), RestoreEncryptedS3Bucket(dst, restore, string(suite.Passphrase), suite.PrivateKeyPath), "failed to restore bucket")
+
+	restored, err := restore.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &restore.Bucket,
+		Prefix: &restore.PathPrefix,
+	})
+	if err != nil {
+		suite.T().Error()
+	}
+	assert.Equal(suite.T(), 2, int(*restored.KeyCount))
+
+	r := 0
+	for _, so := range source.Contents {
+		for _, ro := range restored.Contents {
+			if *ro.Key == *so.Key && *so.Size == *ro.Size {
+				r++
+
+				break
+			}
+		}
+	}
+	assert.Equal(suite.T(), 2, r, "not all objects restored")
 }
