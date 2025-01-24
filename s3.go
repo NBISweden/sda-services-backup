@@ -215,3 +215,67 @@ func BackupS3BuckeEncrypted(source, destination *s3Backend, publicKeyPath string
 
 	return nil
 }
+
+func RestoreEncryptedS3Bucket(source, destination *s3Backend, passphrase, privateKeyPath string) error {
+	privateKey, err := getPrivateKey(privateKeyPath, passphrase)
+	if err != nil {
+		return fmt.Errorf("private key error: %s", err)
+	}
+
+	// list files in src bucket
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	for _, obj := range result.Contents {
+		wg.Add(1)
+		log.Debugf("restoring object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		reader, wr := io.Pipe()
+		go func() {
+			defer wg.Done()
+			_, err := destination.Uploader.Upload(&s3manager.UploadInput{
+				Body:            reader,
+				Bucket:          aws.String(destination.Bucket),
+				Key:             aws.String(strings.TrimSuffix(*obj.Key, ".c4gh")),
+				ContentEncoding: aws.String("application/octet-stream"),
+			})
+			if err != nil {
+				_ = reader.CloseWithError(err)
+			}
+		}()
+
+		d, err := newDecryptor(privateKey, s.Body)
+		if err != nil {
+			log.Error("c4gh decryptor failure")
+
+			return err
+		}
+
+		i, err := io.Copy(wr, d)
+		if err != nil {
+			return fmt.Errorf("failed to copy data: %s", err.Error())
+		}
+		log.Debugf("bytes copied: %d", i)
+
+		d.Close()
+		wr.Close()
+	}
+	wg.Wait()
+
+	return nil
+}
+
