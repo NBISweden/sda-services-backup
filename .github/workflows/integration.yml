@@ -6,7 +6,7 @@ jobs:
   build:
     strategy:
       matrix:
-        test: [db_test, es_test, mongo_test, db_integrity_test]
+        test: [db_test, es_test, mongo_test, db_integrity_test, s3_backup_and_restore]
 
     runs-on: ubuntu-latest
 

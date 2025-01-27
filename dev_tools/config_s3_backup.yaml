@@ -1,0 +1,18 @@
+crypt4ghPublicKey: "./dev_tools/keys/backup.pub.pem"
+crypt4ghPrivateKey: "./dev_tools/keys/backup.sec.pem"
+crypt4ghPassphrase: "randomPass"
+loglevel: debug
+destination:
+  url: "https://127.0.0.1"
+  port: 9000
+  accesskey: "myaccesskey"
+  secretkey: "mysecretkey"
+  bucket: "encrypted"
+  cacert: "./dev_tools/certs/ca.pem"
+source:
+  url: "https://127.0.0.1"
+  port: 9000
+  accesskey: "myaccesskey"
+  secretkey: "mysecretkey"
+  bucket: "source"
+  cacert: "./dev_tools/certs/ca.pem"
