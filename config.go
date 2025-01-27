@@ -25,6 +25,8 @@ type Config struct {
 	publicKeyPath  string
 	privateKeyPath string
 	c4ghPassword   string
+	s3Source       S3Config
+	s3Destination  S3Config
 }
 
 // NewConfig initializes and parses the config file and/or environment using
@@ -181,8 +183,14 @@ func configMongoDB() mongoConfig {
 }
 
 func (c *Config) readConfig() {
+	if viper.IsSet("s3.url") {
+		c.s3 = configS3Storage("s3")
+	}
 
-	c.s3 = configS3Storage("s3")
+	if viper.IsSet("source.url") && viper.IsSet("destination.url") {
+		c.s3Source = configS3Storage("source")
+		c.s3Destination = configS3Storage("destination")
+	}
 
 	c.db = configPostgres()
 
