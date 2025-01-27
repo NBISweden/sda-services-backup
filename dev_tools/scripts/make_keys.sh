@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 LOCATION=$(dirname "$0")/..
 
@@ -31,25 +31,8 @@ if [ -z "$C4GH" ] | [[ $C4GHGEN != *"the required flag"* ]]; then
         wget -qO- "https://github.com/neicnordic/crypt4gh/releases/download/v1.8.2/crypt4gh_$ARCH.tar.gz" | tar zxf - -C "$LOCATION"/keys
     fi
 
+    # Generate the keys and move them to the keys folder
+    ./"$LOCATION"/keys/crypt4gh generate -n "$LOCATION/keys/backup" -p "randomPass"
+else
+    crypt4gh generate -n "$LOCATION/keys/backup" -p "randomPass"
 fi
-
-# Key pair name and passphrase for the crypt4gh keys
-KEYNAME="testkey"
-PASSPHRASE="testPass"
-
-# Generate the keys and move them to the keys folder
-./"$LOCATION"/keys/crypt4gh generate -n $KEYNAME -p $PASSPHRASE
-mv $KEYNAME.* "$LOCATION"/keys
-
-# Replace the keys and passphrase in the config files
-CONFIG_FILES=("$LOCATION/config_postgres.yaml" "$LOCATION/config_elastic.yaml" "$LOCATION/config_mongo.yaml" "$LOCATION/dockerfile_config_mongo.yaml")
-
-for configfile in ${CONFIG_FILES[@]}; do
-    PUBKEY=$(grep -F crypt4ghPublicKey $configfile | cut -d'"' -f2 | rev | cut -d'/' -f1 | rev)
-    PRIVKEY=$(grep -F crypt4ghPrivateKey $configfile | cut -d'"' -f2 | rev | cut -d'/' -f1 | rev)
-    PASSWORD=$(grep -F crypt4ghPassphrase $configfile | cut -d'"' -f2)
-
-    sed -i "s/$PUBKEY/$KEYNAME.pub.pem/g" $configfile
-    sed -i "s/$PRIVKEY/$KEYNAME.sec.pem/g" $configfile
-    sed -i "s/$PASSWORD/$PASSPHRASE/g" $configfile
-done
