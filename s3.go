@@ -166,7 +166,7 @@ func transportConfigS3(config S3Config) http.RoundTripper {
 	return trConfig
 }
 
-func BackupS3BuckeEncrypted(source, destination *s3Backend, publicKeyPath string) error {
+func BackupS3BucketEncrypted(source, destination *s3Backend, publicKeyPath string) error {
 	privateKey, publicKeyList, err := getKeys(publicKeyPath)
 	if err != nil {
 		return fmt.Errorf("could not retrieve public key or generate private key: %s", err)

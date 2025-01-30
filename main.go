@@ -106,7 +106,7 @@ func main() {
 			log.Fatal("Could not connect to s3 destnation backend: ", err)
 		}
 
-		if err = BackupS3BuckeEncrypted(src, dst, conf.publicKeyPath); err != nil {
+		if err = BackupS3BucketEncrypted(src, dst, conf.publicKeyPath); err != nil {
 			log.Fatal(err)
 		}
 	case "restore_bucket":

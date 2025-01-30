@@ -138,7 +138,7 @@ Again here a docker container is used for the same reason explained in the `Pg_b
 
 ## S3 backup
 
-All options needs to be specified in the config file, in the `source` and `destination` S3 config blocks.
+All options need to be specified in the config file, in the `source` and `destination` S3 config blocks.
 
 ### Backing up an S3 bucket
 

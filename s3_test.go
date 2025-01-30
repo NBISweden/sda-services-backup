@@ -58,7 +58,7 @@ func (suite *S3TestSuite) SetupSuite() {
 		suite.T().FailNow()
 	}
 	if err := keys.WriteCrypt4GHX25519PublicKey(pubKey, suite.PublicKey); err != nil {
-		suite.T().Log("failed to rite pubk key to file")
+		suite.T().Log("failed to write pubk key to file")
 		suite.T().FailNow()
 	}
 
@@ -70,7 +70,7 @@ func (suite *S3TestSuite) SetupSuite() {
 	}
 	suite.Passphrase = []byte("passphrase")
 	if err := keys.WriteCrypt4GHX25519PrivateKey(privateKey, suite.PrivateKey, suite.Passphrase); err != nil {
-		suite.T().Log("failed to rite pubk key to file")
+		suite.T().Log("failed to write pubk key to file")
 		suite.T().FailNow()
 	}
 
@@ -86,7 +86,6 @@ func (suite *S3TestSuite) SetupSuite() {
 		suite.T().Log("failed to generate data file")
 		suite.T().FailNow()
 	}
-	defer os.RemoveAll(data)
 
 	sb, err := newS3Backend(suite.Conf)
 	if err != nil {
@@ -121,9 +120,10 @@ func (suite *S3TestSuite) SetupSuite() {
 		}
 		fr.Close()
 	}
+	os.RemoveAll(data)
 }
 
-func (suite *S3TestSuite) TaredownSuite() {
+func (suite *S3TestSuite) TeardownSuite() {
 	os.RemoveAll(suite.PublicKeyPath)
 }
 
@@ -160,7 +160,7 @@ func (suite *S3TestSuite) TestBackupAndRestoreS3BucketEncrypted() {
 		suite.T().FailNow()
 	}
 
-	assert.NoError(suite.T(), BackupS3BuckeEncrypted(src, dst, suite.PublicKeyPath), "failed to sync bucket")
+	assert.NoError(suite.T(), BackupS3BucketEncrypted(src, dst, suite.PublicKeyPath), "failed to sync bucket")
 
 	backedup, err := dst.Client.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: &dst.Bucket,
@@ -183,7 +183,7 @@ func (suite *S3TestSuite) TestBackupAndRestoreS3BucketEncrypted() {
 	}
 	assert.Equal(suite.T(), 5, b, "not all objects backedup")
 
-	// test restoreing encrypted backups to a new bucket
+	// test restoring encrypted backups to a new bucket
 	restConf := suite.Conf
 	restConf.Bucket = "restored"
 	restore, err := newS3Backend(restConf)
@@ -235,7 +235,7 @@ func (suite *S3TestSuite) TestBackupAndRestoreS3BucketSubPathEncrypted() {
 		suite.T().Logf("failed to create destination backend, reason :%s", err.Error())
 		suite.T().FailNow()
 	}
-	assert.NoError(suite.T(), BackupS3BuckeEncrypted(src, dst, suite.PublicKeyPath), "failed to sync bucket")
+	assert.NoError(suite.T(), BackupS3BucketEncrypted(src, dst, suite.PublicKeyPath), "failed to sync bucket")
 
 	backup, err := dst.Client.ListObjectsV2(&s3.ListObjectsV2Input{
 		Bucket: &dst.Bucket,
