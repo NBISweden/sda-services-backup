@@ -22,21 +22,23 @@ import (
 )
 
 type s3Backend struct {
-	Client   *s3.S3
-	Uploader *s3manager.Uploader
-	Bucket   string
+	Client     *s3.S3
+	Uploader   *s3manager.Uploader
+	Bucket     string
+	PathPrefix string
 }
 
 // S3Config stores information about the S3 storage backend
 type S3Config struct {
-	URL       string
-	Port      int
-	AccessKey string
-	SecretKey string
-	Bucket    string
-	Region    string
-	Chunksize int
-	Cacert    string
+	URL        string
+	Port       int
+	AccessKey  string
+	SecretKey  string
+	Bucket     string
+	Region     string
+	Chunksize  int
+	Cacert     string
+	PathPrefix string
 }
 
 func newS3Backend(config S3Config) (*s3Backend, error) {
@@ -73,10 +75,11 @@ func newS3Backend(config S3Config) (*s3Backend, error) {
 		Uploader: s3manager.NewUploader(s3Session, func(u *s3manager.Uploader) {
 			u.LeavePartsOnError = false
 		}),
-		Client: s3.New(s3Session)}
+		Client:     s3.New(s3Session),
+		PathPrefix: config.PathPrefix,
+	}
 
 	_, err = sb.Client.ListObjectsV2(&s3.ListObjectsV2Input{Bucket: &config.Bucket})
-
 	if err != nil {
 		return nil, err
 	}
@@ -161,4 +164,151 @@ func transportConfigS3(config S3Config) http.RoundTripper {
 		ForceAttemptHTTP2: true}
 
 	return trConfig
+}
+
+func BackupS3BucketEncrypted(source, destination *s3Backend, publicKeyPath string) error {
+	privateKey, publicKeyList, err := getKeys(publicKeyPath)
+	if err != nil {
+		return fmt.Errorf("could not retrieve public key or generate private key: %s", err)
+	}
+
+	// list files in src bucket
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	for _, obj := range result.Contents {
+		log.Debugf("copying object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		wr, err := destination.NewFileWriter(fmt.Sprintf("%s.c4gh", *obj.Key), &wg)
+		if err != nil {
+			return fmt.Errorf("could not open backup writer: %s", err)
+		}
+
+		e, err := newEncryptor(publicKeyList, privateKey, wr)
+		if err != nil {
+			return err
+		}
+
+		i, err := io.Copy(e, s.Body)
+		if err != nil {
+			return fmt.Errorf("failed to copy data: %s", err.Error())
+		}
+		log.Debugf("bytes copied: %d", i)
+		e.Close()
+		wr.Close()
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func RestoreEncryptedS3Bucket(source, destination *s3Backend, passphrase, privateKeyPath string) error {
+	privateKey, err := getPrivateKey(privateKeyPath, passphrase)
+	if err != nil {
+		return fmt.Errorf("private key error: %s", err)
+	}
+
+	// list files in src bucket
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	wg := sync.WaitGroup{}
+	for _, obj := range result.Contents {
+		wg.Add(1)
+		log.Debugf("restoring object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		reader, wr := io.Pipe()
+		go func() {
+			defer wg.Done()
+			_, err := destination.Uploader.Upload(&s3manager.UploadInput{
+				Body:            reader,
+				Bucket:          aws.String(destination.Bucket),
+				Key:             aws.String(strings.TrimSuffix(*obj.Key, ".c4gh")),
+				ContentEncoding: aws.String("application/octet-stream"),
+			})
+			if err != nil {
+				_ = reader.CloseWithError(err)
+			}
+		}()
+
+		d, err := newDecryptor(privateKey, s.Body)
+		if err != nil {
+			log.Error("c4gh decryptor failure")
+
+			return err
+		}
+
+		i, err := io.Copy(wr, d)
+		if err != nil {
+			return fmt.Errorf("failed to copy data: %s", err.Error())
+		}
+		log.Debugf("bytes copied: %d", i)
+
+		d.Close()
+		wr.Close()
+	}
+	wg.Wait()
+
+	return nil
+}
+
+func SyncS3Buckets(source, destination *s3Backend) error {
+	result, err := source.Client.ListObjectsV2(&s3.ListObjectsV2Input{
+		Bucket: &source.Bucket,
+		Prefix: &source.PathPrefix,
+	})
+	if err != nil {
+		return err
+	}
+
+	for _, obj := range result.Contents {
+		log.Debugf("copying object: %s", *obj.Key)
+		s, err := source.Client.GetObject(&s3.GetObjectInput{
+			Bucket: &source.Bucket,
+			Key:    obj.Key,
+		})
+		if err != nil {
+			return err
+		}
+		defer s.Body.Close()
+
+		_, err = destination.Uploader.Upload(&s3manager.UploadInput{
+			Body:            s.Body,
+			Bucket:          aws.String(destination.Bucket),
+			Key:             obj.Key,
+			ContentEncoding: aws.String("application/octet-stream"),
+		})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

@@ -25,6 +25,8 @@ type Config struct {
 	publicKeyPath  string
 	privateKeyPath string
 	c4ghPassword   string
+	s3Source       S3Config
+	s3Destination  S3Config
 }
 
 // NewConfig initializes and parses the config file and/or environment using
@@ -59,29 +61,33 @@ func getCLflags() ClFlags {
 }
 
 // configS3Storage populates a S3Config
-func configS3Storage() S3Config {
+func configS3Storage(prefix string) S3Config {
 	s3 := S3Config{}
-	s3.URL = viper.GetString("s3.url")
-	s3.AccessKey = viper.GetString("s3.accesskey")
-	s3.SecretKey = viper.GetString("s3.secretkey")
-	s3.Bucket = viper.GetString("s3.bucket")
+	s3.URL = viper.GetString(prefix + ".url")
+	s3.AccessKey = viper.GetString(prefix + ".accesskey")
+	s3.SecretKey = viper.GetString(prefix + ".secretkey")
+	s3.Bucket = viper.GetString(prefix + ".bucket")
 	s3.Port = 443
 	s3.Region = "us-east-1"
 
-	if viper.IsSet("s3.port") {
-		s3.Port = viper.GetInt("s3.port")
+	if viper.IsSet(prefix + ".port") {
+		s3.Port = viper.GetInt(prefix + ".port")
 	}
 
-	if viper.IsSet("s3.region") {
-		s3.Region = viper.GetString("s3.region")
+	if viper.IsSet(prefix + ".region") {
+		s3.Region = viper.GetString(prefix + ".region")
 	}
 
-	if viper.IsSet("s3.chunksize") {
-		s3.Chunksize = viper.GetInt("s3.chunksize") * 1024 * 1024
+	if viper.IsSet(prefix + ".chunksize") {
+		s3.Chunksize = viper.GetInt(prefix+".chunksize") * 1024 * 1024
 	}
 
-	if viper.IsSet("s3.cacert") {
-		s3.Cacert = viper.GetString("s3.cacert")
+	if viper.IsSet(prefix + ".cacert") {
+		s3.Cacert = viper.GetString(prefix + ".cacert")
+	}
+
+	if viper.IsSet(prefix + ".PathPrefix") {
+		s3.PathPrefix = viper.GetString(prefix + ".PathPrefix")
 	}
 
 	return s3
@@ -177,8 +183,14 @@ func configMongoDB() mongoConfig {
 }
 
 func (c *Config) readConfig() {
+	if viper.IsSet("s3.url") {
+		c.s3 = configS3Storage("s3")
+	}
 
-	c.s3 = configS3Storage()
+	if viper.IsSet("source.url") && viper.IsSet("destination.url") {
+		c.s3Source = configS3Storage("source")
+		c.s3Destination = configS3Storage("destination")
+	}
 
 	c.db = configPostgres()
 

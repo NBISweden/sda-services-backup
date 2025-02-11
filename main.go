@@ -5,75 +5,137 @@ import (
 )
 
 func main() {
-
 	flags := getCLflags()
-
 	conf := NewConfig()
-	log.Debug(conf.s3)
-
-	sb, err := newS3Backend(conf.s3)
-	if err != nil {
-		log.Fatal("Could not connect to s3 backend: ", err)
-	}
-
-	log.Infof("Connection to s3 bucket %v established", sb.Bucket)
-
-	var elastic *esClient
-	if conf.elastic != (elasticConfig{}) {
-		elastic, err = newElasticClient(conf.elastic)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
-
-	var mongo mongoConfig
-	if conf.mongo != (mongoConfig{}) {
-		mongo = conf.mongo
-	}
-
-	var pg DBConf
-	if conf.db != (DBConf{}) {
-		pg = conf.db
-	}
 
 	switch flags.action {
 	case "es_backup":
-		err := elastic.backupDocuments(sb, conf.publicKeyPath, flags.name)
+		elastic, err := newElasticClient(conf.elastic)
 		if err != nil {
+			log.Fatal(err)
+		}
+		sb, err := newS3Backend(conf.s3)
+		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := elastic.backupDocuments(sb, conf.publicKeyPath, flags.name); err != nil {
 			log.Fatal(err)
 		}
 	case "es_restore":
-		err := elastic.restoreDocuments(sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
+		elastic, err := newElasticClient(conf.elastic)
 		if err != nil {
+			log.Fatal(err)
+		}
+		sb, err := newS3Backend(conf.s3)
+		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := elastic.restoreDocuments(sb, conf.privateKeyPath, flags.name, conf.c4ghPassword); err != nil {
 			log.Fatal(err)
 		}
 	case "mongo_dump":
-		err := mongo.dump(*sb, conf.publicKeyPath, flags.name)
+		mongo := conf.mongo
+		sb, err := newS3Backend(conf.s3)
 		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := mongo.dump(*sb, conf.publicKeyPath, flags.name); err != nil {
 			log.Fatal(err)
 		}
 	case "mongo_restore":
-		err := mongo.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
+		mongo := conf.mongo
+		sb, err := newS3Backend(conf.s3)
 		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := mongo.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword); err != nil {
 			log.Fatal(err)
 		}
 	case "pg_dump":
-		err := pg.dump(*sb, conf.publicKeyPath)
+		pg := conf.db
+		sb, err := newS3Backend(conf.s3)
 		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := pg.dump(*sb, conf.publicKeyPath); err != nil {
 			log.Fatal(err)
 		}
 	case "pg_restore":
-		err := pg.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
+		pg := conf.db
+		sb, err := newS3Backend(conf.s3)
 		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := pg.restore(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword); err != nil {
 			log.Fatal(err)
 		}
 	case "pg_basebackup":
-		err := pg.basebackup(*sb, conf.publicKeyPath)
+		pg := conf.db
+		sb, err := newS3Backend(conf.s3)
 		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := pg.basebackup(*sb, conf.publicKeyPath); err != nil {
 			log.Fatal(err)
 		}
 	case "pg_db-unpack":
-		err := pg.baseBackupUnpack(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword)
+		pg := conf.db
+		sb, err := newS3Backend(conf.s3)
+		if err != nil {
+			log.Fatal("Could not connect to s3 backend: ", err)
+		}
+
+		if err := pg.baseBackupUnpack(*sb, conf.privateKeyPath, flags.name, conf.c4ghPassword); err != nil {
+			log.Fatal(err)
+		}
+	case "backup_bucket":
+		src, err := newS3Backend(conf.s3Source)
+		if err != nil {
+			log.Fatal("Could not connect to s3 source backend: ", err)
+		}
+
+		dst, err := newS3Backend(conf.s3Destination)
+		if err != nil {
+			log.Fatal("Could not connect to s3 destnation backend: ", err)
+		}
+
+		if err = BackupS3BucketEncrypted(src, dst, conf.publicKeyPath); err != nil {
+			log.Fatal(err)
+		}
+	case "restore_bucket":
+		src, err := newS3Backend(conf.s3Source)
+		if err != nil {
+			log.Fatal("Could not connect to s3 source backend: ", err)
+		}
+
+		dst, err := newS3Backend(conf.s3Destination)
+		if err != nil {
+			log.Fatal("Could not connect to s3 destnation backend: ", err)
+
+		}
+		err = RestoreEncryptedS3Bucket(src, dst, conf.c4ghPassword, conf.privateKeyPath)
+		if err != nil {
+			log.Fatal(err)
+		}
+	case "sync_buckets":
+		src, err := newS3Backend(conf.s3Source)
+		if err != nil {
+			log.Fatal("Could not connect to s3 source backend: ", err)
+		}
+
+		dst, err := newS3Backend(conf.s3Destination)
+		if err != nil {
+			log.Fatal("Could not connect to s3 destnation backend: ", err)
+
+		}
+		err = SyncS3Buckets(src, dst)
 		if err != nil {
 			log.Fatal(err)
 		}
