@@ -115,16 +115,23 @@ func (es esClient) countDocuments(indexName string) error {
 
 	if err != nil {
 		log.Error(err)
+
+		return err
 	}
 
 	json := readResponse(cr.Body)
-	cr.Body.Close()
+	err = cr.Body.Close()
+	if err != nil {
+		log.Error(err)
+
+		return err
+	}
 
 	count := int(gjson.Get(json, "count").Int())
 
 	log.Infof("Found %v documents", count)
 
-	return err
+	return nil
 }
 
 func findIndices(es esClient, indexGlob string) ([]string, error) {
@@ -226,7 +233,10 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		}
 
 		json := readResponse(res.Body)
-		res.Body.Close()
+		err = res.Body.Close()
+		if err != nil {
+			return err
+		}
 
 		hits := gjson.Get(json, "hits.hits")
 		_, err = c.Write([]byte(hits.Raw + "\n"))
@@ -253,7 +263,10 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 			}
 
 			json = readResponse(res.Body)
-			res.Body.Close()
+			err = res.Body.Close()
+			if err != nil {
+				return err
+			}
 
 			scrollID = gjson.Get(json, "_scroll_id").String()
 

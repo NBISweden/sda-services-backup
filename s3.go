@@ -208,8 +208,15 @@ func BackupS3BucketEncrypted(source, destination *s3Backend, publicKeyPath strin
 			return fmt.Errorf("failed to copy data: %s", err.Error())
 		}
 		log.Debugf("bytes copied: %d", i)
-		e.Close()
-		wr.Close()
+		err = e.Close()
+		if err != nil {
+			return err
+		}
+
+		err = wr.Close()
+		if err != nil {
+			return err
+		}
 	}
 	wg.Wait()
 
@@ -271,8 +278,15 @@ func RestoreEncryptedS3Bucket(source, destination *s3Backend, passphrase, privat
 		}
 		log.Debugf("bytes copied: %d", i)
 
-		d.Close()
-		wr.Close()
+		err = d.Close()
+		if err != nil {
+			return err
+		}
+
+		err = wr.Close()
+		if err != nil {
+			return err
+		}
 	}
 	wg.Wait()
 
