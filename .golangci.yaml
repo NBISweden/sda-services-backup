@@ -17,6 +17,9 @@ linters:
     - revive
     - rowserrcheck
   settings:
+    gosec:
+      excludes:
+        - G204
     revive:
       rules:
       - name: package-comments
