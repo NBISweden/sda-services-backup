@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -101,7 +102,8 @@ func (suite *S3TestSuite) SetupSuite() {
 		"foo/bar/foobar.file2",
 	}
 	for _, f := range files {
-		fr, err := os.Open(data + "/file")
+		path := filepath.Clean(data + "/file") // gosec G304
+		fr, err := os.Open(path)
 		if err != nil {
 			suite.T().Log("failed to open data file")
 			suite.T().FailNow()
