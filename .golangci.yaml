@@ -1,0 +1,27 @@
+version: "2"
+run:
+  timeout: 5m
+formatters:
+  enable:
+    - gofmt
+    - goimports
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - gocritic
+    - gosec
+    - govet
+    - nestif
+    - nlreturn
+    - revive
+    - rowserrcheck
+  settings:
+    gosec:
+      excludes:
+        - G204
+    revive:
+      rules:
+      - name: package-comments
+        disabled: true
+

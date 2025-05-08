@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -101,7 +102,8 @@ func (suite *S3TestSuite) SetupSuite() {
 		"foo/bar/foobar.file2",
 	}
 	for _, f := range files {
-		fr, err := os.Open(data + "/file")
+		path := filepath.Clean(data + "/file") // gosec G304
+		fr, err := os.Open(path)
 		if err != nil {
 			suite.T().Log("failed to open data file")
 			suite.T().FailNow()
@@ -118,13 +120,25 @@ func (suite *S3TestSuite) SetupSuite() {
 			suite.T().Logf("failed to upload files to bucket, reason: %s", err.Error())
 			suite.T().FailNow()
 		}
-		fr.Close()
+		err = fr.Close()
+		if err != nil {
+			suite.T().Logf("failed to close file %s\n", fr.Name())
+			suite.T().FailNow()
+		}
 	}
-	os.RemoveAll(data)
+	err = os.RemoveAll(data)
+	if err != nil {
+		suite.T().Log("failed to remove all test files")
+		suite.T().FailNow()
+	}
 }
 
 func (suite *S3TestSuite) TeardownSuite() {
-	os.RemoveAll(suite.PublicKeyPath)
+	err := os.RemoveAll(suite.PublicKeyPath)
+	if err != nil {
+		suite.T().Logf("failed to remove file %s\n", suite.PublicKeyPath)
+		suite.T().FailNow()
+	}
 }
 
 func (suite *S3TestSuite) TestNewBackend() {

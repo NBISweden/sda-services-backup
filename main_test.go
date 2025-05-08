@@ -64,7 +64,10 @@ func TestMain(m *testing.M) {
 		if err != nil {
 			return err
 		}
-		res.Body.Close()
+		err = res.Body.Close()
+		if err != nil {
+			return err
+		}
 
 		return nil
 	}); err != nil {

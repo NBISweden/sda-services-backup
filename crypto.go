@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 	"os"
+	"path/filepath"
 
 	"github.com/neicnordic/crypt4gh/keys"
 	"github.com/neicnordic/crypt4gh/streaming"
@@ -32,6 +33,7 @@ func getKeys(path string) ([32]byte, [][32]byte, error) {
 		return [32]byte{}, nil, err
 	}
 
+	path = filepath.Clean(path) // gosec G304
 	publicKey, err := os.Open(path)
 	if err != nil {
 		log.Debug("Could not open public key")
@@ -53,6 +55,7 @@ func getKeys(path string) ([32]byte, [][32]byte, error) {
 
 // Function for retrieving the private key (for decrypting) which is given in the config file
 func getPrivateKey(path, password string) ([32]byte, error) {
+	path = filepath.Clean(path) // gosec G304
 	privateKey, err := os.Open(path)
 	if err != nil {
 		log.Debug("Could not open private key")
