@@ -124,7 +124,7 @@ func (es esClient) countDocuments(indexName string) error {
 	if err != nil {
 		log.Error(err)
 
-		return err
+		return fmt.Errorf("error while closing count response: %v", err)
 	}
 
 	count := int(gjson.Get(json, "count").Int())
@@ -235,7 +235,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 		json := readResponse(res.Body)
 		err = res.Body.Close()
 		if err != nil {
-			return err
+			return fmt.Errorf("error while closing response: %v", err)
 		}
 
 		hits := gjson.Get(json, "hits.hits")
@@ -265,7 +265,7 @@ func (es esClient) backupDocuments(sb *s3Backend, publicKeyPath, indexGlob strin
 			json = readResponse(res.Body)
 			err = res.Body.Close()
 			if err != nil {
-				return err
+				return fmt.Errorf("error while closing response: %v", err)
 			}
 
 			scrollID = gjson.Get(json, "_scroll_id").String()
