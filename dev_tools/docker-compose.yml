@@ -95,7 +95,7 @@ services:
       - ./certs:/certs:ro
       - pgData:/data
   mongodb-0:
-    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    image: docker.io/bitnamilegacy/mongodb:4.4.3
     container_name: mongodb-0
     healthcheck:
       test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
@@ -116,7 +116,7 @@ services:
       - mongodb_master_data:/bitnami/mongodb
       - ./certs:/certs:ro
   mongodb-1:
-    image: docker.io/bitnami/mongodb:4.4.3-debian-10-r26
+    image: docker.io/bitnamilegacy/mongodb:4.4.3
     container_name: mongodb-1
     healthcheck:
       test: ["CMD-SHELL", "mongo --disableImplicitSessions --tls --tlsCertificateKeyFile=/certs/server.pem --tlsCAFile=/certs/ca.pem --eval 'db.hello().isWritablePrimary || db.hello().secondary' | grep true"]
