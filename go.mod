@@ -9,7 +9,7 @@ require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/elastic/go-elasticsearch/v7 v7.17.10
 	github.com/lib/pq v1.10.9
-	github.com/neicnordic/crypt4gh v1.14.0
+	github.com/neicnordic/crypt4gh v1.14.2
 	github.com/ory/dockertest/v3 v3.12.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/pflag v1.0.10
@@ -20,7 +20,7 @@ require (
 
 require (
 	dario.cat/mergo v1.0.0 // indirect
-	filippo.io/edwards25519 v1.1.0 // indirect
+	filippo.io/edwards25519 v1.2.0 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20230124172434-306776ec8161 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
@@ -58,9 +58,9 @@ require (
 	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
