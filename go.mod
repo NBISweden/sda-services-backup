@@ -15,7 +15,7 @@ require (
 	github.com/spf13/pflag v1.0.10
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
-	github.com/tidwall/gjson v1.18.0
+	github.com/tidwall/gjson v1.19.0
 )
 
 require (
