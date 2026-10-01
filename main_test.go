@@ -30,8 +30,8 @@ func TestMain(m *testing.M) {
 
 	minio, err := pool.RunWithOptions(&dockertest.RunOptions{
 		Name:       "s3",
-		Repository: "minio/minio",
-		Tag:        "RELEASE.2023-05-18T00-05-36Z",
+		Repository: "pgsty/minio",
+		Tag:        "RELEASE.2026-08-04T00-00-00Z",
 		Cmd:        []string{"server", "/data", "--console-address", ":9001"},
 		Env: []string{
 			"MINIO_ROOT_USER=access",
